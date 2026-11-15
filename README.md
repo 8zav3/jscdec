@@ -14,8 +14,8 @@
     <img src="https://img.shields.io/badge/Node.js-%3E%3D18-339933?logo=nodedotjs&logoColor=white" alt="Node.js >=18">
     <img src="https://img.shields.io/badge/Language-JavaScript-F7DF1E?logo=javascript&logoColor=black" alt="JavaScript">
     <img src="https://img.shields.io/badge/Electron-22--34-47848F?logo=electron&logoColor=white" alt="Electron 22-34">
-    <a href="https://github.com/8zav/jscdec/stargazers"><img src="https://img.shields.io/github/stars/8zav/jscdec?style=flat&logo=github" alt="GitHub stars"></a>
-    <a href="https://github.com/8zav/jscdec/network/members"><img src="https://img.shields.io/github/forks/8zav/jscdec?style=flat&logo=github" alt="GitHub forks"></a>
+    <a href="https://github.com/8zav1/jscdec/stargazers"><img src="https://img.shields.io/github/stars/8zav1/jscdec?style=flat&logo=github" alt="GitHub stars"></a>
+    <a href="https://github.com/8zav1/jscdec/network/members"><img src="https://img.shields.io/github/forks/8zav1/jscdec?style=flat&logo=github" alt="GitHub forks"></a>
   </p>
 </div>
 
@@ -42,7 +42,7 @@ https://github.com/user-attachments/assets/98a98f6a-83f6-49f1-8a08-1fe047629554
 ## Installation & Usage
 
 ```bash
-git clone https://github.com/8zav/jscdec.git
+git clone https://github.com/8zav1/jscdec.git
 cd jscdec
 ```
 
