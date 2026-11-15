@@ -36,8 +36,12 @@ function findRuntime(file, explicit) {
 
 function decompileFile(file, opts = {}) {
   const buf = fs.readFileSync(file);
-  const exe = findRuntime(file, opts.exe);
-  const prog = new Program(buf, { exe, template: opts.template || path.join(__dirname, '../templates/oracle-v12.8.jsc') });
+  const exe = (opts.exe && opts.confirmRuntimeExec === true) ? opts.exe : '';
+  const prog = new Program(buf, {
+    exe,
+    confirmRuntimeExec: opts.confirmRuntimeExec === true,
+    template: opts.template || path.join(__dirname, '../templates/oracle-v12.8.jsc')
+  });
   const top = prog.sfi(prog.h.objs[0]);
   let target = top;
   const topPool = top.bc && top.bc.pool;

@@ -35,6 +35,7 @@ const W8_REFS = new Map([
   }),
 ]);
 
+const W8_V113_REFS = new Map(Object.entries(require('../templates/ro-v11.3-x64.json')));
 const W4_REFS = new Map(Object.entries(require('../templates/ro-v12.8.json')));
 const RO_MULTI = require('../templates/ro-multi.json');
 const BASE_ROOTS = [
@@ -58,6 +59,7 @@ const VHASH_NAMES = {
   '7762fcca': 'V8 13.0 (Electron 33)',
   '4bb8f07c': 'V8 13.2 (Electron 34)',
   '79dafe74': 'V8 12.4 x64 (Node.js 22)',
+  '00e4c20b': 'V8 11.3 x64 (Node.js 20)',
 };
 
 class Program {
@@ -69,7 +71,7 @@ class Program {
     this.bcMap = this.h.objs[1] ? mapOf(this.h, this.h.objs[1]) : 45;
     this.scopeMap = this.sfiMap - 1;
     this.objDescMap = this.bcMap - 1;
-    this.isPre128 = (this.h.W === 8 && this.h.objs[0]?.size === 8) || (this.h.W === 4 && (this.bcMap <= 44 || (this.h.objs[1]?.words[8]?.v & 0xffff) >= 4));
+    this.isPre128 = (this.h.W === 8 && (this.h.objs[0]?.size <= 8 || this.bcMap <= 44)) || (this.h.W === 4 && (this.bcMap <= 44 || (this.h.objs[1]?.words[8]?.v & 0xffff) >= 4));
     this.isV124 = this.isPre128;
     this.retCode = 0xaf;
     if (this.h.objs[1]) {
@@ -86,6 +88,9 @@ class Program {
   _extractBcBytes(bo) {
     if (this.h.W === 8) {
       const length = bo.words[1].hi;
+      if (this.h.start === 0x18 || this.bcMap <= 43) {
+        return rawBytes(bo, 6, bo.size).subarray(6, 6 + length);
+      }
       return rawBytes(bo, 8, bo.size).subarray(0, length);
     }
     const lenIdx = this.bcMap <= 43 ? 1 : 2;
@@ -96,7 +101,10 @@ class Program {
   }
 
   _resolveRefs() {
-    if (this.h.W === 8) { this.refs = new Map(W8_REFS); return; }
+    if (this.h.W === 8) {
+      this.refs = new Map(this.h.start === 0x18 || this.bcMap <= 43 ? W8_V113_REFS : W8_REFS);
+      return;
+    }
     const fallbackVhash = { 0xa9: 'a8eb6c86', 0xaa: '6ed61d9d', 0xab: '0b16a189', 0xae: 'b327e0e5', 0xb3: '4bb8f07c' }[this.retCode];
     const mTbl = RO_MULTI.tables[this.vhash] || (fallbackVhash && RO_MULTI.tables[fallbackVhash]);
     if (mTbl) {
@@ -116,8 +124,8 @@ class Program {
         else if (w.t === 'root' && !this.refs.has(`root:${w.idx}`)) want.push({ k: 'root', a: w.idx });
       }
     }
-    if (want.length && this.opts.exe && fs.existsSync(this.opts.exe)) {
-      for (const [k, v] of oracle.resolve(this.opts.exe, this.opts.template, want)) this.refs.set(k, v);
+    if (want.length && this.opts.exe && this.opts.confirmRuntimeExec === true && fs.existsSync(this.opts.exe)) {
+      for (const [k, v] of oracle.resolve(this.opts.exe, this.opts.template, want, { confirmRuntimeExec: true })) this.refs.set(k, v);
     }
   }
 
@@ -228,16 +236,29 @@ class Program {
       bytes.opTable = this.retCode;
       if (this.bcMap <= 43) bytes.r0 = -6;
       if (this.h.W === 8) {
-        const rawP = bo.words[6].hi & 0xffff;
-        bc = {
-          length: bo.words[1].hi,
-          bytes,
-          pool: bo.words[5].t === 'obj' ? this.h.objs[bo.words[5].id] : null,
-          handlers: bo.words[4].t === 'obj' ? this.h.objs[bo.words[4].id] : null,
-          srcpos: bo.words[3].t === 'obj' ? this.h.objs[bo.words[3].id] : null,
-          frameSize: bo.words[6].lo,
-          params: (rawP >= 8 && (rawP & 7) === 0) ? (rawP >> 3) : rawP,
-        };
+        if (this.h.start === 0x18 || this.bcMap <= 43) {
+          const rawP = bo.words[5].hi & 0xffff;
+          bc = {
+            length: bo.words[1].hi,
+            bytes,
+            pool: bo.words[2].t === 'obj' ? this.h.objs[bo.words[2].id] : null,
+            handlers: bo.words[3].t === 'obj' ? this.h.objs[bo.words[3].id] : null,
+            srcpos: bo.words[4].t === 'obj' ? this.h.objs[bo.words[4].id] : null,
+            frameSize: bo.words[5].lo,
+            params: (rawP >= 8 && (rawP & 7) === 0) ? (rawP >> 3) : rawP,
+          };
+        } else {
+          const rawP = bo.words[6].hi & 0xffff;
+          bc = {
+            length: bo.words[1].hi,
+            bytes,
+            pool: bo.words[5].t === 'obj' ? this.h.objs[bo.words[5].id] : null,
+            handlers: bo.words[4].t === 'obj' ? this.h.objs[bo.words[4].id] : null,
+            srcpos: bo.words[3].t === 'obj' ? this.h.objs[bo.words[3].id] : null,
+            frameSize: bo.words[6].lo,
+            params: (rawP >= 8 && (rawP & 7) === 0) ? (rawP >> 3) : rawP,
+          };
+        }
       } else if (this.bcMap <= 43) {
         const rawP = bo.words[6].v & 0xffff;
         bc = {

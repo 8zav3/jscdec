@@ -58,10 +58,12 @@ node bin/jscdec.js path/to/file.jsc -o output.js
 node bin/jscdec.js path/to/build-stage -o out/
 ```
 
-### Custom runtime for unindexed `RO_SPACE` constants (optional)
+### Custom runtime for unindexed `RO_SPACE` constants (optional, opt-in)
+
+> **Security note:** `jscdec` never executes discovered binaries automatically. External runtime execution via `--runtime` requires explicit `--allow-runtime-exec` confirmation and should only be used with trusted binaries.
 
 ```bash
-node bin/jscdec.js path/to/build-stage -o out/ --runtime "path/to/electron.exe"
+node bin/jscdec.js path/to/build-stage -o out/ --runtime "path/to/electron.exe" --allow-runtime-exec
 ```
 
 ---

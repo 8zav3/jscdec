@@ -7,7 +7,8 @@
     "jscdec": "./bin/jscdec.js"
   },
   "scripts": {
-    "decompile": "node bin/jscdec.js"
+    "decompile": "node bin/jscdec.js",
+    "test": "node --test test/regression.test.js"
   },
   "keywords": [
     "v8",

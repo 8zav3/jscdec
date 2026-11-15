@@ -21,7 +21,10 @@ function classify(line) {
   return m ? m[1] : 'other';
 }
 
-function resolve(exe, template, refs) {
+function resolve(exe, template, refs, opts = {}) {
+  if (!opts || opts.confirmRuntimeExec !== true) {
+    throw new Error(`Refusing to execute external binary "${exe}" without explicit confirmRuntimeExec: true consent`);
+  }
   const uniq = [...new Map(refs.map(r => [key(r), r])).values()];
   const child = path.join(__dirname, 'oracle-child.js');
   const out1 = run(exe, ['--allow-natives-syntax', child, template, 'classify'], JSON.stringify(uniq));

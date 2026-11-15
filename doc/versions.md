@@ -16,7 +16,7 @@
 | **Electron 27.x** | **V8 11.8** | 4-byte (pointer compression) | `0x20` / `0xaa` (199 opcodes) | **Full support** — built-in `RO_SPACE` table |
 | **Electron 25.x–26.x** | **V8 11.4–11.6** | 4-byte (pointer compression) | `0x18` / `0xaa` (199 opcodes) | **Full support** — built-in `RO_SPACE` table |
 | **Electron 22.x–24.x** | **V8 10.8–11.2** | 4-byte (pointer compression) | `0x18` / `0xa9` (198 opcodes) | **Full support** — built-in `RO_SPACE` table |
-| **Node.js 20.x–22.x (x64)** | **V8 11.3–12.4** | 8-byte (uncompressed x64) | `0x20` / `0xae` (203 opcodes) | **Full support** — built-in x64 `RO_SPACE` table |
+| **Node.js 20.x–22.x (x64)** | **V8 11.3–12.4** | 8-byte (uncompressed x64) | `0x18`/`0x20` / `0xa9`/`0xae` | **Full support** — built-in x64 `RO_SPACE` tables (`V8 11.3` & `V8 12.4`) |
 
 ## Snapshot & Bytecode Differences Handled Automatically
 

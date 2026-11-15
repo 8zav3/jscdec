@@ -3,11 +3,24 @@
 const HEADER = 0x20;
 class Heap {
   constructor(buf, opts = {}) {
+    if (!Buffer.isBuffer(buf) && !(buf instanceof Uint8Array)) {
+      throw new TypeError('Invalid input: expected a Buffer or Uint8Array');
+    }
+    if (!Buffer.isBuffer(buf)) buf = Buffer.from(buf);
+    if (buf.length < 0x20) {
+      throw new Error(`Invalid V8 SerializedCodeData (.jsc): file too small (${buf.length} bytes)`);
+    }
+    const magicHi = buf.readUInt32LE(0) >>> 16;
+    if (magicHi !== 0xc0de) {
+      throw new Error(`Invalid V8 SerializedCodeData (.jsc) magic 0x${buf.readUInt32LE(0).toString(16).padStart(8, '0')} (expected 0xc0de....)`);
+    }
     this.buf = buf;
+    this.vhash = buf.readUInt32LE(4).toString(16).padStart(8, '0');
     this.start = (buf.length >= 0x20 && buf[0x18] === 0x01 && buf.readUInt32LE(0x14) === 0) ? 0x18 : HEADER;
     this.pos = this.start;
-    this.W = opts.wordSize || (buf.length >= 0x32 && buf[0x27] === 0x60 && buf.readUInt32LE(0x28) === 0 && buf.readUInt32LE(0x2c) > 0 && buf[0x2c] !== 0x60 && buf[0x30] <= 0x05 ? 8 : 4);
-    this.shift = (this.W === 4 && buf[this.start + 5] === 0x06) ? 1 : 0;
+    const s = this.start;
+    this.W = opts.wordSize || (buf.length >= s + 0x12 && buf[s + 7] === 0x60 && buf.readUInt32LE(s + 8) === 0 && buf.readUInt32LE(s + 12) > 0 && buf[s + 12] !== 0x60 && buf[s + 16] <= 0x05 ? 8 : 4);
+    this.shift = (buf[this.start + 5] === 0x06) ? 1 : 0;
     this.selfTag = (this.W === 4 && buf[this.start + 3] === 0x1c) ? 0x1d : (this.W === 4 && buf[this.start + 3] === 0x1d ? 0x1e : -1);
     this.objs = [];
     this.hot = new Array(8).fill(null);
@@ -63,7 +76,7 @@ class Heap {
     if (tag >= 0x60 && tag <= 0x7f) { const n = tag - 0x5f; this.raw(o, i, n); return n; }
     if (tag >= 0x80 && tag <= 0x8f) { const n = tag - 0x80 + 2; const b = this.u8(); for (let k = 0; k < n; k++) this.put(o, i + k, { t: 'root', idx: b & 0x1f }); return n; }
     if (tag >= 0x90 && tag <= 0x97) { this.put(o, i, this.hot[tag & 7]); return 1; }
-    throw new Error('unknown snapshot tag 0x' + tag.toString(16) + ' @0x' + at.toString(16));
+    throw new Error(`Unsupported or corrupt V8 snapshot: unknown snapshot tag 0x${tag.toString(16)} @0x${at.toString(16)} (vhash=0x${this.vhash}, W=${this.W}, header=0x${this.start.toString(16)}, shift=${this.shift})`);
   }
   raw(o, i, n) {
     if (this.W === 8) {
