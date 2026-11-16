@@ -6,7 +6,7 @@ const { decompileFile } = require('../src/index');
 
 const args = process.argv.slice(2);
 if (!args.length || args.includes('-h') || args.includes('--help')) {
-  console.error('usage: jscdec <file.jsc|dir> [-o out] [--runtime <electron.exe> --allow-runtime-exec]');
+  console.error('usage: jscdec <file.jsc|dir> [-o out] [--deobfuscate] [--runtime <electron.exe> --allow-runtime-exec]');
   process.exit(args.length ? 0 : 1);
 }
 
@@ -30,6 +30,8 @@ for (let i = 0; i < args.length; i++) {
     opt.exe = args[++i];
   } else if (a === '--allow-runtime-exec' || a === '--confirm-runtime-exec') {
     opt.confirmRuntimeExec = true;
+  } else if (a === '--deobfuscate' || a === '--deobf') {
+    opt.deobfuscate = true;
   } else if (a.startsWith('-')) {
     console.error('error: unknown option ' + a);
     process.exit(1);

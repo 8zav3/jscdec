@@ -1607,7 +1607,7 @@ function process(info, opts = {}) {
     countIds(body, c2, w2);
     inlineBlock(body, c2, w2);
   }
-  if (opts?.deobfuscate !== false && deobfuscate0x(info)) {
+  if (opts?.deobfuscate === true && deobfuscate0x(info)) {
     const cleanAfter0x = (fnInfo) => {
       const b = fnInfo.body;
       const fixIndex = (list) => {
