@@ -1250,7 +1250,7 @@ function deobfuscate0x(info) {
       if (callsArr) {
         decFnIdx = i;
         decFnName = s.info.name;
-        useRc4 = (s.info.params && s.info.params.length >= 2) || hasRc4Magic;
+        useRc4 = hasRc4Magic;
         const offStmt = s.info.body.find(st => st && st.t === 'expr' && st.e.k === 'assign' &&
           ((st.e.op === '-=' && st.e.value.k === 'lit') ||
            (st.e.op === '=' && st.e.value.k === 'bin' && st.e.value.op === '-' && st.e.value.r.k === 'lit')));
