@@ -1198,6 +1198,26 @@ function customB64Decode(str) {
   try { return decodeURIComponent(uri); } catch { return out; }
 }
 
+function rc4Decode(b64, key) {
+  const data = customB64Decode(b64);
+  const s = new Array(256);
+  for (let i = 0; i < 256; i++) s[i] = i;
+  let j = 0;
+  for (let i = 0; i < 256; i++) {
+    j = (j + s[i] + key.charCodeAt(i % key.length)) % 256;
+    const x = s[i]; s[i] = s[j]; s[j] = x;
+  }
+  let i = 0; j = 0;
+  let out = '';
+  for (let y = 0; y < data.length; y++) {
+    i = (i + 1) % 256;
+    j = (j + s[i]) % 256;
+    const x = s[i]; s[i] = s[j]; s[j] = x;
+    out += String.fromCharCode(data.charCodeAt(y) ^ s[(s[i] + s[j]) % 256]);
+  }
+  return out;
+}
+
 function deobfuscate0x(info) {
   const body = info.body;
   let arrFnIdx = -1, arrFnName = null, rawArr = null;
@@ -1214,23 +1234,28 @@ function deobfuscate0x(info) {
     }
   }
   if (!rawArr) return false;
+  rawArr = rawArr.slice();
 
-  let decFnIdx = -1, decFnName = null, baseOffset = 0, useB64 = false;
+  let decFnIdx = -1, decFnName = null, baseOffset = 0, useB64 = false, useRc4 = false;
   for (let i = 0; i < body.length; i++) {
     const s = body[i];
     if (s.t === 'fndecl' && /^_0x/.test(s.info.name || '') && i !== arrFnIdx) {
       let callsArr = false;
+      let hasRc4Magic = false;
       eachExprDeep(s.info.body, (o, k) => walkExpr(o[k], n => {
         if (n.k === 'call' && n.fn.k === 'id' && n.fn.name === arrFnName) callsArr = true;
         if (n.k === 'lit' && typeof n.v === 'string' && n.v.startsWith('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')) useB64 = true;
+        if (n.k === 'lit' && n.v === 256) hasRc4Magic = true;
       }));
       if (callsArr) {
         decFnIdx = i;
         decFnName = s.info.name;
-        const first = s.info.body[0];
-        if (first && first.t === 'expr' && first.e.k === 'assign') {
-          if (first.e.op === '-=' && first.e.value.k === 'lit') baseOffset = first.e.value.v;
-          else if (first.e.op === '=' && first.e.value.k === 'bin' && first.e.value.op === '-' && first.e.value.r.k === 'lit') baseOffset = first.e.value.r.v;
+        useRc4 = (s.info.params && s.info.params.length >= 2) || hasRc4Magic;
+        const offStmt = s.info.body.find(st => st && st.t === 'expr' && st.e.k === 'assign' &&
+          ((st.e.op === '-=' && st.e.value.k === 'lit') ||
+           (st.e.op === '=' && st.e.value.k === 'bin' && st.e.value.op === '-' && st.e.value.r.k === 'lit')));
+        if (offStmt) {
+          baseOffset = offStmt.e.op === '-=' ? offStmt.e.value.v : offStmt.e.value.r.v;
         }
         break;
       }
@@ -1238,9 +1263,13 @@ function deobfuscate0x(info) {
   }
   if (!decFnName) return false;
 
-  const getStr = (idx) => {
+  const getStr = (idx, key) => {
     const s = rawArr[idx - baseOffset];
     if (s === undefined) return '';
+    if (useRc4) {
+      if (typeof key !== 'string') return null;
+      return rc4Decode(s, key);
+    }
     return useB64 ? customB64Decode(s) : s;
   };
 
@@ -1269,37 +1298,90 @@ function deobfuscate0x(info) {
             }
           }
           if (e.k === 'call' && e.fn.k === 'id' && e.fn.name === 'parseInt' && e.args[0]?.k === 'call' && e.args[0].args[0]?.k === 'lit') {
-            return parseInt(getStr(e.args[0].args[0].v), 10);
+            const idxVal = e.args[0].args[0].v;
+            const keyVal = e.args[0].args[1]?.k === 'lit' ? e.args[0].args[1].v : undefined;
+            const decoded = getStr(idxVal, keyVal);
+            return decoded === null ? NaN : parseInt(decoded, 10);
           }
           return NaN;
         };
+        let rotMatched = false;
         for (let rot = 0; rot < rawArr.length; rot++) {
           const val = evalAst(sumExpr);
-          if (Math.round(val) === targetSum) break;
+          if (Math.round(val) === targetSum) { rotMatched = true; break; }
           rawArr.push(rawArr.shift());
         }
+        if (!rotMatched) return false;
       }
       break;
     }
   }
 
+  const aliases = new Set([decFnName]);
+  const collectAliases = (list) => {
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (let i = 0; i < list.length; i++) {
+        const s = list[i];
+        if (s.t === 'var' && s.e && s.e.k === 'id' && aliases.has(s.e.name) && !aliases.has(s.name)) {
+          aliases.add(s.name);
+          changed = true;
+        } else if (s.t === 'expr' && s.e.k === 'assign' && s.e.op === '=' && s.e.target.k === 'id' && s.e.value.k === 'id' && aliases.has(s.e.value.name) && !aliases.has(s.e.target.name)) {
+          aliases.add(s.e.target.name);
+          changed = true;
+        }
+      }
+    }
+    for (const s of list) {
+      for (const [o, k] of stmtExprs(s)) walkExpr(o[k], n => {
+        if (n.k === 'fn' && n.info?.body) collectAliases(n.info.body);
+      });
+      for (const b of childBlocks(s)) collectAliases(b);
+    }
+  };
+  collectAliases(body);
+
+  const canResolveCall = (n) => {
+    if (!(n.k === 'call' && n.fn.k === 'id' && aliases.has(n.fn.name))) return false;
+    if (!useRc4) return n.args.length === 1 && n.args[0].k === 'lit' && typeof n.args[0].v === 'number';
+    return n.args.length === 2 && n.args[0].k === 'lit' && typeof n.args[0].v === 'number' && n.args[1].k === 'lit' && typeof n.args[1].v === 'string';
+  };
+
+  let hasUnresolved = false;
+  const checkUnresolved = (list, skipTop) => {
+    for (let i = 0; i < list.length; i++) {
+      if (skipTop && (i === arrFnIdx || i === decFnIdx || i === iifeIdx)) continue;
+      const s = list[i];
+      for (const [o, k] of stmtExprs(s)) walkExpr(o[k], n => {
+        if (n.k === 'call' && n.fn.k === 'id' && aliases.has(n.fn.name) && !canResolveCall(n)) {
+          hasUnresolved = true;
+        }
+        if (n.k === 'fn' && n.info?.body) checkUnresolved(n.info.body, false);
+      });
+      for (const b of childBlocks(s)) checkUnresolved(b, false);
+    }
+  };
+  checkUnresolved(body, true);
+  if (hasUnresolved) return false;
+
   const toRemove = [arrFnIdx, decFnIdx, iifeIdx].filter(x => x >= 0).sort((a, b) => b - a);
   for (const idx of toRemove) body.splice(idx, 1);
 
   const cleanScope = (stmts, parentAliases) => {
-    const aliases = new Set(parentAliases);
-    const collectAliases = (list) => {
+    const scopeAliases = new Set(parentAliases);
+    const pruneAliases = (list) => {
       let changed = true;
       while (changed) {
         changed = false;
         for (let i = list.length - 1; i >= 0; i--) {
           const s = list[i];
-          if (s.t === 'var' && s.e && s.e.k === 'id' && aliases.has(s.e.name)) {
-            aliases.add(s.name);
+          if (s.t === 'var' && s.e && s.e.k === 'id' && scopeAliases.has(s.e.name)) {
+            scopeAliases.add(s.name);
             list.splice(i, 1);
             changed = true;
-          } else if (s.t === 'expr' && s.e.k === 'assign' && s.e.op === '=' && s.e.target.k === 'id' && s.e.value.k === 'id' && aliases.has(s.e.value.name)) {
-            aliases.add(s.e.target.name);
+          } else if (s.t === 'expr' && s.e.k === 'assign' && s.e.op === '=' && s.e.target.k === 'id' && s.e.value.k === 'id' && scopeAliases.has(s.e.value.name)) {
+            scopeAliases.add(s.e.target.name);
             list.splice(i, 1);
             changed = true;
           }
@@ -1307,18 +1389,24 @@ function deobfuscate0x(info) {
       }
       for (const s of list) {
         for (const [o, k] of stmtExprs(s)) walkExpr(o[k], n => {
-          if (n.k === 'fn' && n.info?.body) collectAliases(n.info.body);
+          if (n.k === 'fn' && n.info?.body) pruneAliases(n.info.body);
         });
-        for (const b of childBlocks(s)) collectAliases(b);
+        for (const b of childBlocks(s)) pruneAliases(b);
       }
     };
-    collectAliases(stmts);
+    pruneAliases(stmts);
 
     const replaceAllDecoderCalls = (list) => {
       eachExprDeep(list, (o, k) => {
         o[k] = mapExpr(o[k], n => {
-          if (n.k === 'call' && n.fn.k === 'id' && aliases.has(n.fn.name) && n.args.length === 1 && n.args[0].k === 'lit' && typeof n.args[0].v === 'number') {
-            return E.lit(getStr(n.args[0].v));
+          if (n.k === 'call' && n.fn.k === 'id' && scopeAliases.has(n.fn.name)) {
+            if (!useRc4 && n.args.length === 1 && n.args[0].k === 'lit' && typeof n.args[0].v === 'number') {
+              return E.lit(getStr(n.args[0].v));
+            }
+            if (useRc4 && n.args.length === 2 && n.args[0].k === 'lit' && typeof n.args[0].v === 'number' && n.args[1].k === 'lit' && typeof n.args[1].v === 'string') {
+              const decoded = getStr(n.args[0].v, n.args[1].v);
+              if (decoded !== null) return E.lit(decoded);
+            }
           }
           if (n.k === 'fn' && n.info?.body) replaceAllDecoderCalls(n.info.body);
           return null;
@@ -1498,13 +1586,13 @@ function deobfuscate0x(info) {
   return true;
 }
 
-function process(info) {
+function process(info, opts = {}) {
   const body = info.body;
   stripWrapperPrologue(body, true);
   const nested = [];
   eachExprDeep(body, (o, k) => fnBodies(o[k], nested));
   collectFnDecls(body, nested);
-  nested.forEach(process);
+  nested.forEach(n => process(n, opts));
 
   for (let pass = 0; pass < 4; pass++) {
     foldShortCircuit(body);
@@ -1519,7 +1607,7 @@ function process(info) {
     countIds(body, c2, w2);
     inlineBlock(body, c2, w2);
   }
-  if (deobfuscate0x(info)) {
+  if (opts?.deobfuscate !== false && deobfuscate0x(info)) {
     const cleanAfter0x = (fnInfo) => {
       const b = fnInfo.body;
       const fixIndex = (list) => {

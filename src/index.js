@@ -52,7 +52,7 @@ function decompileFile(file, opts = {}) {
   const chain = [];
   const dec = new FnDec(prog, target, chain, { moduleWrapper: true });
   const info = dec.run();
-  post.process(info);
+  post.process(info, opts);
   post.rename(info);
   const v8ver = prog.detectVersion();
   const header = opts.noHeader ? '' : `// Decompiled from: ${path.basename(file)}\n// Detected: ${v8ver}\n\n`;

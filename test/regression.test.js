@@ -159,3 +159,16 @@ test('Discovered Electron executables are never executed implicitly during decom
     fs.rmSync(tmp, { recursive: true, force: true });
   }
 });
+
+test('RC4 _0x string-array deobfuscation decodes all strings and preserves decoder when disabled', () => {
+  const sample = path.join(ROOT, 'test-jsc', 'toy_rc4.jsc');
+  const clean = decompileFile(sample);
+  assert.match(clean, /const GREETING = "hello from the toy";/);
+  assert.match(clean, /console\.log\(risky\(3\)\);/);
+  assert.match(clean, /throw new Error\("negative"\);/);
+  assert.match(clean, /return "caught " \+ err\.message;/);
+
+  const raw = decompileFile(sample, { deobfuscate: false });
+  assert.match(raw, /function _0x1afd/);
+  assert.match(raw, /function _0x2f3b/);
+});
