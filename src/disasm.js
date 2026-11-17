@@ -27,7 +27,7 @@ const OPS_V108 = filterOps(OPS_V114, ['ToBoolean']);
 const OPS_V134 = OPS_W8;
 const OPS_V138 = filterOps(OPS, ['StaScriptContextSlot', 'StaCurrentScriptContextSlot'], {
   CreateFunctionContext: [{ name: 'CreateFunctionContextWithCells', ops: ['kIdx', 'kUImm'], use: 'kWriteAccumulator' }],
-  ThrowReferenceErrorIfHole: [{ name: 'ForOfNext', ops: ['kReg', 'kReg', 'kReg', 'kIdx'], use: 'kNone' }],
+  ForInStep: [{ name: 'ForOfNext', ops: ['kReg', 'kReg', 'kReg', 'kIdx'], use: 'kNone' }],
   DefineKeyedOwnPropertyInLiteral: [{ name: 'SetPrototypeProperties', ops: ['kIdx', 'kIdx'], use: 'kReadAndClobberAccumulator' }],
 }, {
   LdaContextSlot: [{ name: 'LdaContextSlotNoCell', ops: ['kReg', 'kIdx', 'kUImm'], use: 'kWriteAccumulator' }],
@@ -40,7 +40,9 @@ const OPS_V138 = filterOps(OPS, ['StaScriptContextSlot', 'StaCurrentScriptContex
   LdaLookupContextSlotInsideTypeof: [{ name: 'LdaLookupContextSlotNoCellInsideTypeof', ops: ['kIdx', 'kIdx', 'kUImm'], use: 'kWriteAccumulator' }],
 });
 const OPS_V142_231 = filterOps(OPS_V138, [], {
-  StaModuleVariable: [{ name: 'V8_14_2_Reserved38', ops: ['kReg', 'kIdx', 'kIdx'], use: 'kReadAndClobberAccumulator' }],
+  ShiftRightLogical: [
+    { name: 'V8_14_2_Extra4c', ops: ['kReg', 'kIdx'], use: 'kReadWriteAccumulator' },
+  ],
 });
 const TABLES = {
   0xa9: OPS_V108, 0xaa: OPS_V114, 0xab: OPS_V122, 0xae: OPS_V124, 0xaf: OPS,
