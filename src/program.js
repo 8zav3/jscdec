@@ -70,7 +70,7 @@ class Program {
     this.h = this.heap;
     this.sfiMap = this.h.objs[0] ? mapOf(this.h, this.h.objs[0]) : 20;
     this.bcMap = this.h.objs[1] ? mapOf(this.h, this.h.objs[1]) : 45;
-    this.scopeMap = this.sfiMap - 1;
+    this.scopeMap = this.sfiMap === 17 ? 79 : this.sfiMap - 1;
     this.objDescMap = this.bcMap - 1;
     this.isPre128 = (this.h.W === 8 && (this.h.objs[0]?.size <= 8 || this.bcMap <= 44)) || (this.h.W === 4 && (this.bcMap <= 44 || (this.h.objs[1]?.words[8]?.v & 0xffff) >= 4));
     this.isV124 = this.isPre128;
@@ -106,7 +106,7 @@ class Program {
       this.refs = new Map(this.h.start === 0x18 || this.bcMap <= 43 ? W8_V113_REFS : W8_REFS);
       return;
     }
-    const fallbackVhash = { 0xa9: 'a8eb6c86', 0xaa: '6ed61d9d', 0xab: '0b16a189', 0xae: 'b327e0e5', 0xb3: '4bb8f07c', 0xb5: '4bb8f07c', 0xb6: '4bb8f07c', 0xb7: '4bb8f07c' }[this.retCode];
+    const fallbackVhash = { 0xa9: 'a8eb6c86', 0xaa: '6ed61d9d', 0xab: '0b16a189', 0xae: 'b327e0e5', 0xb3: '4bb8f07c' }[this.retCode];
     const mTbl = RO_MULTI.tables[this.vhash] || (fallbackVhash && RO_MULTI.tables[fallbackVhash]);
     if (mTbl) {
       this.refs = new Map(BASE_ROOTS);
@@ -135,6 +135,7 @@ class Program {
     switch (w.t) {
       case 'raw': return { kind: 'smi', value: smiv(w) };
       case 'ro': case 'root': {
+        const refId = w.t === 'ro' ? `ro_${w.chunk}_${w.off}` : `root_${w.idx}`;
         const r = this.refs.get(w.t === 'ro' ? `ro:${w.chunk}:${w.off}` : `root:${w.idx}`) || { type: 'unknown' };
         if (r.type === 'string') return { kind: 'str', value: r.value };
         if (r.type === 'undefined') return { kind: 'undef' };
@@ -143,7 +144,7 @@ class Program {
         if (r.type === 'false') return { kind: 'false' };
         if (r.type === 'hole') return { kind: 'hole' };
         if (r.type === 'uninitialized_value') return { kind: 'uninit' };
-        return { kind: 'other', type: r.type, dbg: r.dbg };
+        return { kind: 'other', type: r.type, dbg: r.dbg, ref: r.type === 'unknown' ? refId : undefined };
       }
       case 'obj': return this.objVal(this.h.objs[w.id]);
       case 'att': return { kind: 'attached', idx: w.idx };

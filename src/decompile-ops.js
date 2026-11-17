@@ -27,7 +27,7 @@ P.constExpr = function (v, st) {
     case 'objdesc': return this.objLiteral(v.obj, st);
     case 'arrdesc': return this.arrLiteral(v.obj);
     case 'classdesc': return { k: 'classdesc', obj: v.obj };
-    default: return E.raw('undefined /*const:' + (v.type || v.kind) + '*/');
+    default: return v.ref ? E.id('$' + v.ref) : E.raw('undefined /*const:' + (v.type || v.kind) + '*/');
   }
 };
 P.closure = function (sfiObj, st) {
@@ -91,7 +91,7 @@ P.emitStore = function (st, out, target) {
   if (v.k === 'fn' && v.info.name && !v.info.isClass && /^(Normal|Async|Gen|AsyncGen)$/.test(v.info.kind) && target.k === 'id' && target.name === v.info.name) { out.push({ t: 'fndecl', info: v.info }); return; }
   out.push({ t: 'expr', e: E.assign(target, v) });
 };
-P.keyOf = function (v) { return v.kind === 'str' ? v.value : v.kind === 'smi' ? String(v.value) : '?'; };
+P.keyOf = function (v) { return v.kind === 'str' ? v.value : v.kind === 'smi' ? String(v.value) : v.ref ? '$' + v.ref : '?'; };
 
 P.step = function (ins, i, end, st, out, loop, ifctx) {
   const n = ins.name, o = ins.ops;
