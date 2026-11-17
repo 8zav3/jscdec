@@ -141,12 +141,12 @@ P.step = function (ins, i, end, st, out, loop, ifctx) {
     }
     case 'LdaGlobal': case 'LdaGlobalInsideTypeof': { const v = this.poolv(o[0]); put(E.id(this.keyOf(v))); return nextI; }
     case 'StaGlobal': { const v = this.poolv(o[0]); this.emitStore(st, out, E.id(this.keyOf(v))); return nextI; }
-    case 'LdaContextSlot': case 'LdaImmutableContextSlot': case 'LdaScriptContextSlot': case 'LdaImmutableScriptContextSlot': put(this.ctxVar(st, o[0], o[1], o[2])); return nextI;
-    case 'LdaCurrentContextSlot': case 'LdaImmutableCurrentContextSlot': case 'LdaCurrentScriptContextSlot': put(this.ctxVar(st, undefined, o[0], 0)); return nextI;
-    case 'StaContextSlot': case 'StaScriptContextSlot': this.emitStore(st, out, this.ctxVar(st, o[0], o[1], o[2])); return nextI;
-    case 'StaCurrentContextSlot': case 'StaCurrentScriptContextSlot': this.emitStore(st, out, this.ctxVar(st, undefined, o[0], 0)); return nextI;
+    case 'LdaContextSlot': case 'LdaContextSlotNoCell': case 'LdaImmutableContextSlot': case 'LdaScriptContextSlot': case 'LdaImmutableScriptContextSlot': put(this.ctxVar(st, o[0], o[1], o[2])); return nextI;
+    case 'LdaCurrentContextSlot': case 'LdaCurrentContextSlotNoCell': case 'LdaImmutableCurrentContextSlot': case 'LdaCurrentScriptContextSlot': put(this.ctxVar(st, undefined, o[0], 0)); return nextI;
+    case 'StaContextSlot': case 'StaContextSlotNoCell': case 'StaScriptContextSlot': this.emitStore(st, out, this.ctxVar(st, o[0], o[1], o[2])); return nextI;
+    case 'StaCurrentContextSlot': case 'StaCurrentContextSlotNoCell': case 'StaCurrentScriptContextSlot': this.emitStore(st, out, this.ctxVar(st, undefined, o[0], 0)); return nextI;
     case 'LdaLookupSlot': case 'LdaLookupSlotInsideTypeof': case 'LdaLookupGlobalSlot': case 'LdaLookupGlobalSlotInsideTypeof': put(E.id(this.keyOf(this.poolv(o[0])))); return nextI;
-    case 'LdaLookupContextSlot': case 'LdaLookupContextSlotInsideTypeof': case 'LdaLookupScriptContextSlot': case 'LdaLookupScriptContextSlotInsideTypeof': put(E.id(this.keyOf(this.poolv(o[0])))); return nextI;
+    case 'LdaLookupContextSlot': case 'LdaLookupContextSlotNoCell': case 'LdaLookupContextSlotInsideTypeof': case 'LdaLookupContextSlotNoCellInsideTypeof': case 'LdaLookupScriptContextSlot': case 'LdaLookupScriptContextSlotInsideTypeof': put(E.id(this.keyOf(this.poolv(o[0])))); return nextI;
     case 'StaLookupSlot': this.emitStore(st, out, E.id(this.keyOf(this.poolv(o[0])))); return nextI;
 
     case 'GetNamedProperty': { put(E.member(R(o[0]), this.keyOf(this.poolv(o[1])))); return nextI; }
@@ -289,13 +289,14 @@ P.step = function (ins, i, end, st, out, loop, ifctx) {
     }
     case 'GetTemplateObject': put(E.raw('/*template-object*/')); return nextI;
 
-    case 'CreateFunctionContext': case 'CreateBlockContext': {
+    case 'CreateFunctionContext': case 'CreateFunctionContextWithCells': case 'CreateBlockContext': {
       const sv = this.poolv(o[0]);
-      const sc = sv.kind === 'scope' ? this.prog.scope(sv.obj) : (n === 'CreateFunctionContext' ? this.sfi.scope : null);
+      const isFnCtx = n === 'CreateFunctionContext' || n === 'CreateFunctionContextWithCells';
+      const sc = sv.kind === 'scope' ? this.prog.scope(sv.obj) : (isFnCtx ? this.sfi.scope : null);
       this.flush(st, out);
       const ctx = { k: 'raw', text: '/*ctx*/', chain: [sc || { names: [], extSlot: 0 }, ...st.chain] };
       st.acc = { e: ctx, used: true };
-      if (sc) this.declScope(sc, out, n === 'CreateFunctionContext');
+      if (sc) this.declScope(sc, out, isFnCtx);
       return nextI;
     }
     case 'CreateCatchContext': {

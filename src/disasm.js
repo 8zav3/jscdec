@@ -24,7 +24,29 @@ const OPS_V124 = filterOps(OPS, ['JumpIfForInDoneConstant', 'JumpIfForInDone'], 
 const OPS_V122 = filterOps(OPS_V124, ['StaScriptContextSlot', 'StaCurrentScriptContextSlot', 'GetEnumeratedKeyedProperty']);
 const OPS_V114 = filterOps(OPS_V122, ['ConstructForwardAllArgs']);
 const OPS_V108 = filterOps(OPS_V114, ['ToBoolean']);
-const TABLES = { 0xa9: OPS_V108, 0xaa: OPS_V114, 0xab: OPS_V122, 0xae: OPS_V124, 0xaf: OPS, 0xb3: OPS_W8, v124: OPS_V124, w8: OPS_W8 };
+const OPS_V134 = OPS_W8;
+const OPS_V138 = filterOps(OPS, ['StaScriptContextSlot', 'StaCurrentScriptContextSlot'], {
+  CreateFunctionContext: [{ name: 'CreateFunctionContextWithCells', ops: ['kIdx', 'kUImm'], use: 'kWriteAccumulator' }],
+  ThrowReferenceErrorIfHole: [{ name: 'ForOfNext', ops: ['kReg', 'kReg', 'kReg', 'kIdx'], use: 'kNone' }],
+  DefineKeyedOwnPropertyInLiteral: [{ name: 'SetPrototypeProperties', ops: ['kIdx', 'kIdx'], use: 'kReadAndClobberAccumulator' }],
+}, {
+  LdaContextSlot: [{ name: 'LdaContextSlotNoCell', ops: ['kReg', 'kIdx', 'kUImm'], use: 'kWriteAccumulator' }],
+  LdaCurrentContextSlot: [{ name: 'LdaCurrentContextSlotNoCell', ops: ['kIdx'], use: 'kWriteAccumulator' }],
+  StaContextSlot: [
+    { name: 'StaContextSlotNoCell', ops: ['kReg', 'kIdx', 'kUImm'], use: 'kReadAccumulator' },
+    { name: 'StaCurrentContextSlotNoCell', ops: ['kIdx'], use: 'kReadAccumulator' },
+  ],
+  LdaLookupContextSlot: [{ name: 'LdaLookupContextSlotNoCell', ops: ['kIdx', 'kIdx', 'kUImm'], use: 'kWriteAccumulator' }],
+  LdaLookupContextSlotInsideTypeof: [{ name: 'LdaLookupContextSlotNoCellInsideTypeof', ops: ['kIdx', 'kIdx', 'kUImm'], use: 'kWriteAccumulator' }],
+});
+const OPS_V142_231 = filterOps(OPS_V138, [], {
+  StaModuleVariable: [{ name: 'V8_14_2_Reserved38', ops: ['kReg', 'kIdx', 'kIdx'], use: 'kReadAndClobberAccumulator' }],
+});
+const TABLES = {
+  0xa9: OPS_V108, 0xaa: OPS_V114, 0xab: OPS_V122, 0xae: OPS_V124, 0xaf: OPS,
+  0xb3: OPS_W8, 0xb5: OPS_V138, 0xb6: OPS_V138, 0xb7: OPS_V142_231,
+  v124: OPS_V124, w8: OPS_W8, v134: OPS_V134, v138: OPS_V138, v142: OPS_V142_231,
+};
 const byCode = OPS;
 
 const SCALABLE = new Set(['kReg', 'kRegOut', 'kRegList', 'kRegOutList', 'kRegPair', 'kRegOutPair', 'kRegOutTriple', 'kRegInOut', 'kIdx', 'kUImm', 'kImm', 'kRegCount', 'kNativeContextIndex']);
@@ -49,7 +71,7 @@ function regName(op) {
 const regCount = (ty) => ({ kRegPair: 2, kRegOutPair: 2, kRegOutTriple: 3, kRegInOut: 1, kReg: 1, kRegOut: 1 }[ty] || 0);
 
 function disasm(bytes, w8 = false) {
-  const tbl = TABLES[bytes.opTable] || (w8 || bytes.w8 ? OPS_W8 : byCode);
+  const tbl = (bytes.opTable === 0xb3 && !(w8 || bytes.w8)) ? OPS_V134 : (TABLES[bytes.opTable] || (w8 || bytes.w8 ? OPS_W8 : byCode));
   const out = [];
   let p = 0;
   while (p < bytes.length) {

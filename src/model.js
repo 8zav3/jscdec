@@ -13,7 +13,10 @@ function load(buf) {
 function strOf(h, o, refs) {
   const m = mapOf(h, o);
   const sfiMap = h.objs[0] ? mapOf(h, h.objs[0]) : 20;
-  const isOneByte = m === sfiMap - 2 || m === sfiMap - 3;
+  const looksLikeOneByte = m === sfiMap - 1 && h.W === 4 && o.size >= 4 &&
+    o.words[1]?.t === 'raw' && o.words[2]?.t === 'raw' &&
+    o.words[2].v >= 0 && 3 + Math.ceil(o.words[2].v / 4) === o.size;
+  const isOneByte = m === sfiMap - 2 || m === sfiMap - 3 || looksLikeOneByte;
   if (isOneByte || m === MAP.TWO_BYTE_STR || m === MAP.TWO_BYTE_STR_W8) {
     const len = h.W === 8 ? o.words[1].hi : o.words[2].v;
     const bytes = rawBytes(o, h.W === 8 ? 2 : 3, o.size);

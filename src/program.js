@@ -60,6 +60,7 @@ const VHASH_NAMES = {
   '4bb8f07c': 'V8 13.2 (Electron 34)',
   '79dafe74': 'V8 12.4 x64 (Node.js 22)',
   '00e4c20b': 'V8 11.3 x64 (Node.js 20)',
+  '8f50e237': 'V8 14.2 (Electron 39)',
 };
 
 class Program {
@@ -105,7 +106,7 @@ class Program {
       this.refs = new Map(this.h.start === 0x18 || this.bcMap <= 43 ? W8_V113_REFS : W8_REFS);
       return;
     }
-    const fallbackVhash = { 0xa9: 'a8eb6c86', 0xaa: '6ed61d9d', 0xab: '0b16a189', 0xae: 'b327e0e5', 0xb3: '4bb8f07c' }[this.retCode];
+    const fallbackVhash = { 0xa9: 'a8eb6c86', 0xaa: '6ed61d9d', 0xab: '0b16a189', 0xae: 'b327e0e5', 0xb3: '4bb8f07c', 0xb5: '4bb8f07c', 0xb6: '4bb8f07c', 0xb7: '4bb8f07c' }[this.retCode];
     const mTbl = RO_MULTI.tables[this.vhash] || (fallbackVhash && RO_MULTI.tables[fallbackVhash]);
     if (mTbl) {
       this.refs = new Map(BASE_ROOTS);
