@@ -68,7 +68,17 @@ node bin/jscdec.js path/to/build-stage -o out/ --runtime "path/to/electron.exe" 
 
 ---
 
+## Support & Contributing
+
+Need help with a `.jsc` file, found a bug, or want to add support for a new V8 / Electron build?
+
+- **Open an Issue**: [github.com/8zav3/jscdec/issues](https://github.com/8zav3/jscdec/issues)
+- **Open a Pull Request**: [github.com/8zav3/jscdec/pulls](https://github.com/8zav3/jscdec/pulls)
+- **Contact**: [![GitHub](https://img.shields.io/badge/GitHub-8zav3-181717?style=flat&logo=github&logoColor=white)](https://github.com/8zav3) [![Discord](https://img.shields.io/badge/Discord-Contact-5865F2?style=flat&logo=discord&logoColor=white)](https://discord.com/users/1516402914267234382)
+
+---
+
 <div align="center">
   <p><strong>jscdec</strong> · V8 / Bytenode / Electron bytecode decompiler</p>
-  <p><a href="https://jsc-decompiler.vercel.app">Web Decompiler</a> · <a href="doc/versions.md">Supported Versions</a> · <a href="doc/example.md">Example Output</a></p>
+  <p><a href="https://jsc-decompiler.vercel.app">Web Decompiler</a> · <a href="doc/versions.md">Supported Versions</a> · <a href="doc/example.md">Example Output</a> · <a href="https://github.com/8zav3">GitHub</a> · <a href="https://discord.com/users/1516402914267234382">Discord</a></p>
 </div>
