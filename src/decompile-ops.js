@@ -17,6 +17,7 @@ P.constExpr = function (v, st) {
     case 'smi': return E.lit(v.value);
     case 'num': return E.lit(v.value);
     case 'bigint': return E.raw(v.value);
+    case 'sym': return E.raw(v.value);
     case 'str': return E.lit(v.value);
     case 'undef': return E.undef();
     case 'null': return E.lit(null);
@@ -287,7 +288,23 @@ P.step = function (ins, i, end, st, out, loop, ifctx) {
       for (const c of 'dgimsuvy') if (o[2] & RX[c]) fl += c;
       put(E.regexp(pat, fl)); return nextI;
     }
-    case 'GetTemplateObject': put(E.raw('/*template-object*/')); return nextI;
+    case 'GetTemplateObject': {
+      const pv = this.poolv(o[0]);
+      const rawArrObj = pv && pv.obj && pv.obj.words[1]?.t === 'obj' ? this.prog.h.objs[pv.obj.words[1].id] : null;
+      if (rawArrObj && rawArrObj.words.length >= 3) {
+        const elems = [];
+        for (let k = 2; k < rawArrObj.words.length; k++) {
+          const sv = this.prog.val(rawArrObj.words[k]);
+          if (sv.kind === 'str') elems.push(E.lit(sv.value));
+        }
+        if (elems.length) {
+          put(E.obj([{ key: 'raw', value: E.arr(elems), kind: 'init', computed: false }]));
+          return nextI;
+        }
+      }
+      put(E.raw('/*template-object*/'));
+      return nextI;
+    }
 
     case 'CreateFunctionContext': case 'CreateFunctionContextWithCells': case 'CreateBlockContext': {
       const sv = this.poolv(o[0]);

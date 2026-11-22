@@ -47,6 +47,20 @@ const BASE_ROOTS = [
   ['root:8', { type: 'false' }],
   ['root:9', { type: 'string', value: '' }],
 ];
+const BASE_ROOTS_V142 = [
+  ['root:0', { type: 'undefined' }],
+  ['root:1', { type: 'hole' }],
+  ['root:2', { type: 'null' }],
+  ['root:3', { type: 'true' }],
+  ['root:4', { type: 'false' }],
+  ['root:5', { type: 'string', value: '' }],
+  ['root:6', { type: 'string', value: 'prototype' }],
+  ['root:7', { type: 'string', value: 'name' }],
+  ['root:8', { type: 'string', value: 'length' }],
+  ['root:40', { type: 'uninitialized_value' }],
+  ['root:941', { type: 'symbol', name: 'Symbol.asyncIterator' }],
+  ['root:1027', { type: 'symbol', name: 'Symbol.iterator' }],
+];
 const VHASH_NAMES = {
   a8eb6c86: 'V8 10.8 (Electron 22)',
   '767eeed3': 'V8 11.4 (Electron 25)',
@@ -71,7 +85,7 @@ class Program {
     this.sfiMap = this.h.objs[0] ? mapOf(this.h, this.h.objs[0]) : 20;
     this.bcMap = this.h.objs[1] ? mapOf(this.h, this.h.objs[1]) : 45;
     this.scopeMap = this.sfiMap === 17 ? 79 : this.sfiMap - 1;
-    this.objDescMap = this.bcMap - 1;
+    this.objDescMap = this.sfiMap === 17 ? 70 : this.bcMap - 1;
     this.isPre128 = (this.h.W === 8 && (this.h.objs[0]?.size <= 8 || this.bcMap <= 44)) || (this.h.W === 4 && (this.bcMap <= 44 || (this.h.objs[1]?.words[8]?.v & 0xffff) >= 4));
     this.isV124 = this.isPre128;
     this.retCode = 0xaf;
@@ -109,12 +123,12 @@ class Program {
     const fallbackVhash = { 0xa9: 'a8eb6c86', 0xaa: '6ed61d9d', 0xab: '0b16a189', 0xae: 'b327e0e5', 0xb3: '4bb8f07c' }[this.retCode];
     const mTbl = RO_MULTI.tables[this.vhash] || (fallbackVhash && RO_MULTI.tables[fallbackVhash]);
     if (mTbl) {
-      this.refs = new Map(BASE_ROOTS);
+      this.refs = new Map(this.sfiMap === 17 ? BASE_ROOTS_V142 : BASE_ROOTS);
       for (const [k, idx] of Object.entries(mTbl)) {
         this.refs.set(k, { type: 'string', value: RO_MULTI.strs[idx] });
       }
     } else {
-      this.refs = new Map(W4_REFS);
+      this.refs = new Map(this.sfiMap === 17 ? BASE_ROOTS_V142 : W4_REFS);
     }
     const want = [];
     for (const o of this.h.objs) {
@@ -144,6 +158,7 @@ class Program {
         if (r.type === 'false') return { kind: 'false' };
         if (r.type === 'hole') return { kind: 'hole' };
         if (r.type === 'uninitialized_value') return { kind: 'uninit' };
+        if (r.type === 'symbol' && r.name) return { kind: 'sym', value: r.name };
         return { kind: 'other', type: r.type, dbg: r.dbg, ref: r.type === 'unknown' ? refId : undefined };
       }
       case 'obj': return this.objVal(this.h.objs[w.id]);
@@ -157,10 +172,12 @@ class Program {
     if (s !== null) return { kind: 'str', value: s };
     if (m === this.sfiMap) return { kind: 'sfi', obj: o };
     if (m === this.scopeMap) return { kind: 'scope', obj: o };
-    if (m === this.sfiMap + 5) { const b = rawBytes(o, 1, this.h.W === 8 ? 2 : 3); return { kind: 'num', value: b.readDoubleLE(0) }; }
-    if (m === this.bcMap - 2) { const b = rawBytes(o, 2, o.size); return { kind: 'bigint', value: '0x' + b.readBigUInt64LE(0).toString(16).toUpperCase() + 'n' }; }
+    const numMap = this.sfiMap === 17 ? 20 : this.sfiMap + 5;
+    const bigIntMap = this.sfiMap === 17 ? 48 : this.bcMap - 2;
+    if (m === numMap) { const b = rawBytes(o, 1, this.h.W === 8 ? 2 : 3); return { kind: 'num', value: b.readDoubleLE(0) }; }
+    if (m === bigIntMap) { const b = rawBytes(o, 2, o.size); return { kind: 'bigint', value: '0x' + b.readBigUInt64LE(0).toString(16).toUpperCase() + 'n' }; }
     if (m === this.objDescMap) return { kind: 'objdesc', obj: o };
-    if (o.size === 3 && m >= 600 && o.words[1]?.t === 'raw' && o.words[2]?.t === 'obj') return { kind: 'arrdesc', obj: o };
+    if (o.size === 3 && m >= 600 && o.words[1]?.t === 'raw' && (o.words[2]?.t === 'obj' || o.words[2]?.t === 'root')) return { kind: 'arrdesc', obj: o };
     if ((o.size === 8 && m >= 600 && o.words[1]?.t === 'raw') || (o.size === 9 && m === 12 && o.words[1]?.t === 'raw' && o.words[1].v === 14 && o.words[2]?.t === 'raw')) return { kind: 'classdesc', obj: o };
     return { kind: 'other', type: 'map' + m, obj: o };
   }
