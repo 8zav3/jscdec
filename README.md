@@ -13,7 +13,7 @@
   <p>
     <img src="https://img.shields.io/badge/Node.js-%3E%3D18-339933?logo=nodedotjs&logoColor=white" alt="Node.js >=18">
     <img src="https://img.shields.io/badge/Language-JavaScript-F7DF1E?logo=javascript&logoColor=black" alt="JavaScript">
-    <img src="https://img.shields.io/badge/Electron-22--34-47848F?logo=electron&logoColor=white" alt="Electron 22-34">
+    <img src="https://img.shields.io/badge/Electron-22--39-47848F?logo=electron&logoColor=white" alt="Electron 22-39">
     <a href="https://github.com/8zav3/jscdec/stargazers"><img src="https://img.shields.io/github/stars/8zav3/jscdec?style=flat&logo=github" alt="GitHub stars"></a>
     <a href="https://github.com/8zav3/jscdec/network/members"><img src="https://img.shields.io/github/forks/8zav3/jscdec?style=flat&logo=github" alt="GitHub forks"></a>
   </p>
@@ -25,11 +25,13 @@
 
 Drop a `.jsc` snapshot, an Electron `.asar` archive, or a packaged Electron `.exe` binary directly into the browser at **[https://jsc-decompiler.vercel.app](https://jsc-decompiler.vercel.app)**. Everything runs 100% client-side in memory.
 
-https://github.com/user-attachments/assets/98a98f6a-83f6-49f1-8a08-1fe047629554
+[![jscdec Launch Demo](https://github.com/8zav3/jscdec/releases/download/v1.5.0/jscdec_thumbnail.png)](https://github.com/8zav3/jscdec/releases/download/v1.5.0/jscdec_promo_30s.mp4)
+
+> **Video Demos:** [30s Launch Cut (`jscdec_promo_30s.mp4`)](https://github.com/8zav3/jscdec/releases/download/v1.5.0/jscdec_promo_30s.mp4) · [Full 75s Walkthrough (`jscdec_promo_full.mp4`)](https://github.com/8zav3/jscdec/releases/download/v1.5.0/jscdec_promo_full.mp4) · [15s Vertical Teaser](https://github.com/8zav3/jscdec/releases/download/v1.5.0/jscdec_vertical_15s.mp4)
 
 ## Overview
 
-- **Multi-Version V8 Snapshot Deserializer**: Supports both 4-byte pointer-compressed heaps (`Electron 22–34` / `V8 10.8–13.2`) and 8-byte uncompressed x64 heaps (`Node.js 20–22`) out of the box using pre-built `RO_SPACE` and `Root` tables.
+- **Multi-Version V8 Snapshot Deserializer**: Supports both 4-byte pointer-compressed heaps (`Electron 22–39` / `V8 10.8–14.2`) and 8-byte uncompressed x64 heaps (`Node.js 20–22`) out of the box using pre-built `RO_SPACE` and `Root` tables.
 - **CFG & AST Reconstruction**: Lifts classes (`extends`/`super`, getters/setters, static fields), `async`/`await`, generators, `try`/`catch`/`finally`, loops (`for`, `for...of`, `for...in`, `while`), `switch`, destructuring, and template literals.
 - **Dataflow Identifier Recovery & Deobfuscation**: Restores closure names from `ScopeInfo` (inline arrays & `NameToIndexHashTable`), infers stack register names through forward/backward def-use analysis, and statically resolves rotated `_0x` string-array obfuscators.
 - **In-Browser `.asar` & `.exe` Unpacker**: Extracts `resources/app.asar` from NSIS / 7-Zip packaged Electron executables via WebAssembly and decompiles all embedded `.jsc` files in one pass.
