@@ -75,6 +75,7 @@ const VHASH_NAMES = {
   '79dafe74': 'V8 12.4 x64 (Node.js 22)',
   '00e4c20b': 'V8 11.3 x64 (Node.js 20)',
   '8f50e237': 'V8 14.2 (Electron 39)',
+  '97ffbd52': 'V8 14.6.202.34 (Node 26.13.1, linux-arm64)',
 };
 
 class Program {
@@ -209,7 +210,12 @@ class Program {
       const ht = this.h.objs[o.words[p].id];
       info.names = new Array(n).fill(null);
       if (ht && ht.words) {
-        for (let k = 4; k + 1 < ht.words.length; k += 2) {
+        // Newer V8 (14.6+) uses a five-word hash-table header:
+        // map, size-in-words, element count, deleted count, capacity.
+        // Older layouts start the 2-word entries at word 4.
+        const start = (ht.words[4] && ht.words[4].t === 'raw' &&
+                       ht.words[5] && ht.words[5].t !== 'raw') ? 5 : 4;
+        for (let k = start; k + 1 < ht.words.length; k += 2) {
           const keyStr = this.str(ht.words[k]);
           const idxVal = smiv(ht.words[k + 1]);
           if (keyStr && idxVal != null && idxVal >= 0 && idxVal < n) info.names[idxVal] = keyStr;
