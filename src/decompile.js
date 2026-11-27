@@ -66,9 +66,16 @@ class FnDec {
     return p;
   }
   makeParamNames() {
-    const n = Math.max(0, this.bc.params - 1);
+    // Class constructors with default parameters can report only the `this`
+    // slot in bc.params while ScopeInfo has the real parameter count.
+    const scopeParams = this.sfi.scope ? this.sfi.scope.paramCount : 0;
+    const n = Math.max(0, this.bc.params - 1, scopeParams);
     if (this.cfg.moduleWrapper && n === 5) return ['exports', 'require', 'module', '__filename', '__dirname'];
-    return Array.from({ length: n }, (_, i) => 'a' + i);
+    const names = Array.from({ length: n }, (_, i) => 'a' + i);
+    // The rest array is an extra parameter slot created by
+    // CreateRestParameter; it is not part of the formal parameter count.
+    if (this.insns.some(ins => ins.name === 'CreateRestParameter')) names.push('...rest');
+    return names;
   }
   newVar(prefix = 'v') { return '$' + prefix + (this.nv++); }
   poolv(i) { return this.prog.poolVal(this.bc, i); }

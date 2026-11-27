@@ -38,6 +38,29 @@ test('Node.js 20.20.2 Bytenode-style .jsc files decompile cleanly', () => {
   assert.match(classesOut, /async verify\(/);
 });
 
+test('Rest parameters stay in the function signature', () => {
+  const out = decompileFile(path.join(ROOT, 'test-jsc', '04-rest-params.node20.jsc'));
+  // CreateRestParameter creates an extra slot; it must appear as `...rest` and
+  // the body must use the same name.
+  assert.match(out, /\.\.\.rest/);
+  assert.match(out, /function\([^)]*\.\.\.rest\)/);
+  assert.match(out, /\brest\b/);
+});
+
+test('Class constructor parameters fall back to the ScopeInfo count', () => {
+  const { FnDec } = require('../src/decompile');
+  // V8 14.6 class constructors can report only the `this` slot (params = 1)
+  // while ScopeInfo still has the seven real parameters.
+  const fake = {
+    bc: { params: 1 },
+    sfi: { scope: { paramCount: 7 } },
+    cfg: {},
+    insns: [],
+  };
+  assert.deepEqual(FnDec.prototype.makeParamNames.call(fake),
+    ['a0', 'a1', 'a2', 'a3', 'a4', 'a5', 'a6']);
+});
+
 test('All .jsc files in test-jsc/ decompile without error', () => {
   const files = fs.readdirSync(path.join(ROOT, 'test-jsc')).filter(f => f.endsWith('.jsc'));
   assert.ok(files.length >= 36);
