@@ -109,8 +109,8 @@ class FnDec {
     }
     if (op >= 3) return E.id(this.paramNames[op - 3] || 'a' + (op - 3));
     if (op === 2) return E.id('this');
-    if (op === -1) return E.raw('/*context*/');
-    return E.raw('/*reg' + op + '*/');
+    if (op === -1) return E.raw('undefined /*context*/');
+    return E.raw('undefined /*reg' + op + '*/');
   }
   setReg(st, op, e, out) {
     const r = -7 - op;
