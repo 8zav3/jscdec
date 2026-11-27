@@ -1136,6 +1136,17 @@ function rename(info, usedOuter = new Set(), outerObfMap = new Map()) {
     return n;
   };
 
+  // Destructured parameters are stored as one pattern string (e.g.
+  // "[$d0, $d1]"). Register their inner temp names and rename them in the
+  // pattern so body references get the same name instead of a fresh `val`.
+  const paramDestructHints = ['k', 'v', 'w', 'x', 'y', 'z'];
+  for (let i = 0; i < (info.params || []).length; i++) {
+    const pat = info.params[i];
+    if (typeof pat !== 'string' || !pat.includes('$')) continue;
+    let j = 0;
+    info.params[i] = pat.replace(/\$[A-Za-z_$][\w$]*/g, (t) => allocName(t, paramDestructHints[j++] || null));
+  }
+
   const fix = (body) => {
     for (const s of body) {
       if (s.t === 'fndecl') rename(s.info, names, obfMap);

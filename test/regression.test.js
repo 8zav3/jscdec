@@ -51,6 +51,14 @@ test('Generated temp names are not renamed twice', () => {
   assert.doesNotMatch(out, /\.post\("[^"]*",\s*val\b/);
 });
 
+test('Destructured parameter temps stay consistent', () => {
+  const out = decompileFile(path.join(ROOT, 'test-jsc', '03-destructured-params.node20.jsc'));
+  // The pattern is stored as one string ("[$d0, $d1]"). Its inner temps must
+  // be registered so the body uses the same names instead of `val`/`val2`.
+  assert.doesNotMatch(out, /\bval\d*\b/);
+  assert.match(out, /\(\[k, v\]\) =>/);
+});
+
 test('All .jsc files in test-jsc/ decompile without error', () => {
   const files = fs.readdirSync(path.join(ROOT, 'test-jsc')).filter(f => f.endsWith('.jsc'));
   assert.ok(files.length >= 36);
