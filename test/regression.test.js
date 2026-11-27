@@ -38,6 +38,15 @@ test('Node.js 20.20.2 Bytenode-style .jsc files decompile cleanly', () => {
   assert.match(classesOut, /async verify\(/);
 });
 
+test('Rest parameters stay in the function signature', () => {
+  const out = decompileFile(path.join(ROOT, 'test-jsc', '04-rest-params.node20.jsc'));
+  // CreateRestParameter creates an extra slot; it must appear as `...rest` and
+  // the body must use the same name.
+  assert.match(out, /\.\.\.rest/);
+  assert.match(out, /function\([^)]*\.\.\.rest\)/);
+  assert.match(out, /\brest\b/);
+});
+
 test('All .jsc files in test-jsc/ decompile without error', () => {
   const files = fs.readdirSync(path.join(ROOT, 'test-jsc')).filter(f => f.endsWith('.jsc'));
   assert.ok(files.length >= 36);
