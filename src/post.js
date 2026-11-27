@@ -145,6 +145,12 @@ function reorderHoistedFunctions(body) {
 
 function countIds(body, counts, writes) {
   for (const s of body) {
+    if (s.t === 'for') {
+      for (const txt of [s.init, s.update]) {
+        if (!txt) continue;
+        for (const m of txt.matchAll(/\$[A-Za-z_$][\w$]*/g)) counts.set(m[0], (counts.get(m[0]) || 0) + 1);
+      }
+    }
     for (const [o, k] of stmtExprs(s)) walkExpr(o[k], (n) => {
       if (n.k === 'id') counts.set(n.name, (counts.get(n.name) || 0) + 1);
       if (writes && n.k === 'assign' && n.target.k === 'id') writes.set(n.target.name, (writes.get(n.target.name) || 0) + 1);
@@ -291,9 +297,12 @@ function inlineBlock(list, counts, writes) {
 
 function usesName(s, name) {
   let f = false;
+  const esc = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp('(^|[^\\w$])' + esc + '([^\\w$]|$)');
   const chk = (st) => {
     for (const [o, k] of stmtExprs(st)) walkNoFn(o[k], n => { if (n.k === 'id' && n.name === name) f = true; });
     if (st.t === 'forin' && st.name === name) f = true;
+    if (st.t === 'for' && ((st.init && re.test(st.init)) || (st.update && re.test(st.update)))) f = true;
     if (st.t !== 'fndecl') for (const b of childBlocks(st)) b.forEach(chk);
   };
   chk(s);
@@ -1147,7 +1156,7 @@ function rename(info, usedOuter = new Set(), outerObfMap = new Map()) {
         s.destruct = s.destruct.map((n, idx) => (isTemp(n) || isObfName(n)) ? allocName(n, isSplit ? splitHints[idx] : (idx === 0 ? 'k' : 'v')) : n);
         s.name = '[' + s.destruct.join(', ') + ']';
       } else if (s.t === 'var' && (isTemp(s.name) || isObfName(s.name))) {
-        let hint = propHints.get(s.name) || inferExprName(s.e, map) || assignHints.get(s.name) || sinkHints.get(s.name);
+        let hint = s.hint || propHints.get(s.name) || inferExprName(s.e, map) || assignHints.get(s.name) || sinkHints.get(s.name);
         if (!hint && counterVars.has(s.name)) hint = 'count';
         if (!hint && s.e?.k === 'lit') {
           if (typeof s.e.v === 'boolean') hint = 'flag';
@@ -1586,6 +1595,284 @@ function deobfuscate0x(info) {
   return true;
 }
 
+// V8 lowers `for...of` iterator close into a synthetic try/catch inside the
+// loop's finally: check `iter.return`, call it, and validate the result, with a
+// token-dispatch rethrow. The token registers are not source-level values, so
+// the generic walker renders them as `undefined` (and `throw $exc` without a
+// catch binding). Collapse that synthetic block to the source-level close:
+//
+//   if (iter.return != null) {
+//     const res = iter.return();
+//     if (typeof res !== "object") %Runtime168(res);
+//   }
+function simplifyIteratorClose(root) {
+  const used = new Set();
+  const collect = (list) => {
+    for (const s of list) {
+      if (s.t === 'var') used.add(s.name);
+      if (s.t === 'decl') for (const n of s.names) used.add(n);
+      if (s.t === 'forin') used.add(s.name);
+      for (const [o, k] of stmtExprs(s)) walkExpr(o[k], n => { if (n.k === 'id') used.add(n.name); });
+      if (s.t !== 'fndecl') for (const b of childBlocks(s)) collect(b);
+    }
+  };
+  collect(root);
+  const fresh = (base) => {
+    let n = base, i = 2;
+    while (used.has(n)) n = base + i++;
+    used.add(n);
+    return n;
+  };
+
+  const runtimeCall = (list) => {
+    let found = null;
+    const visit = (e) => {
+      if (!e || typeof e !== 'object' || found) return;
+      if (e.k === 'call' && e.fn.k === 'id' && /^%Runtime/.test(e.fn.name)) { found = e.fn; return; }
+      for (const [, c] of kids(e)) visit(c);
+    };
+    for (const st of list) {
+      for (const [o, k] of stmtExprs(st)) visit(o[k]);
+      if (st.t !== 'fndecl') for (const b of childBlocks(st)) visitList(b);
+    }
+    function visitList(l) { for (const st of l) { for (const [o, k] of stmtExprs(st)) visit(o[k]); if (st.t !== 'fndecl') for (const b of childBlocks(st)) visitList(b); } }
+    return found;
+  };
+
+  const closeCond = (c) => {
+    if (!c || c.k !== 'logic' || c.op !== '&&') return null;
+    const a = c.l, b = c.r;
+    if (!(a.k === 'bin' && a.op === '!=' && a.r.k === 'lit' && a.r.v === null && a.l.k === 'member' && a.l.prop === 'return')) return null;
+    if (!(b.k === 'bin' && b.op === '!==' && b.r.k === 'lit' && b.r.v === 'object' && b.l.k === 'un' && b.l.op === 'typeof')) return null;
+    const call = b.l.e;
+    if (!(call && call.k === 'call' && call.fn.k === 'member' && call.fn.prop === 'return' && call.args.length === 0)) return null;
+    return { iter: a.l.obj };
+  };
+  const isCloseIf = (x) => x && x.t === 'if' && x.c && x.c.k === 'bin' && x.c.op === '!=' && x.c.l && x.c.l.k === 'member' && x.c.l.prop === 'return';
+
+  const outsideUses = (skip) => {
+    const uses = [];
+    const visit = (e) => {
+      if (!e || typeof e !== 'object') return;
+      if (e.k === 'assign' && e.op === '=' && e.target.k === 'id' && e.value.k === 'id') {
+        uses.push({ name: e.value.name, to: e.target.name });
+        return;
+      }
+      if (e.k === 'id') { uses.push({ name: e.name }); return; }
+      if (e.k === 'fn') return;
+      for (const [, c] of kids(e)) visit(c);
+    };
+    const scan = (l) => {
+      for (const st of l) {
+        if (st === skip) continue;
+        for (const [o, k] of stmtExprs(st)) visit(o[k]);
+        if (st.t !== 'fndecl') for (const b of childBlocks(st)) scan(b);
+      }
+    };
+    scan(root);
+    return uses;
+  };
+  const sinksSafe = (sinks, t) => {
+    if (!sinks.size) return true;
+    const uses = outsideUses(t);
+    const pending = [...sinks];
+    const checked = new Set();
+    while (pending.length) {
+      const n = pending.pop();
+      if (checked.has(n)) continue;
+      checked.add(n);
+      for (const u of uses) {
+        if (u.name !== n) continue;
+        // A temp that only forwards the sink to another temp is still an
+        // artifact of the token dispatch, not a value the source reads.
+        if (u.to && u.to[0] === '$') { pending.push(u.to); continue; }
+        return false;
+      }
+    }
+    return true;
+  };
+  const match = (t) => {
+    if (t.t !== 'try' || !t.catchBody || t.param) return null;
+    if (!/"\$exc"/.test(JSON.stringify(t.catchBody))) return null;
+    let iff = null, closeIdx = -1;
+    for (let i = 0; i < t.body.length; i++) {
+      const st = t.body[i];
+      const cc = st.t === 'if' ? closeCond(st.c) : null;
+      if (cc) { iff = st; closeIdx = i; break; }
+    }
+    if (!iff) return null;
+    const sinks = new Set();
+    const artifact = (st, isCatch) => {
+      if (st.t === 'comment') return true;
+      if (st.t === 'decl') return true;
+      if (st.t === 'expr' && st.e.k === 'assign' && st.e.op === '=' && st.e.target.k === 'id') { sinks.add(st.e.target.name); return true; }
+      if (isCatch && st.t === 'throw' && st.e && st.e.k === 'id') return true;
+      if (isCatch && st.t === 'if') {
+        let hasThrow = false;
+        const scan = (l) => { for (const x of l) { if (x.t === 'throw' && x.e && x.e.k === 'id') hasThrow = true; if (x.t !== 'fndecl') for (const b of childBlocks(x)) scan(b); } };
+        scan(st.a); if (st.b) scan(st.b);
+        return hasThrow;
+      }
+      return false;
+    };
+    for (let i = 0; i < t.body.length; i++) if (i !== closeIdx && !artifact(t.body[i], false)) return null;
+    for (const st of t.catchBody) if (!artifact(st, true)) return null;
+    if (!sinksSafe(sinks, t)) return null;
+    const runtime = runtimeCall(iff.a) || E.id('%Runtime168');
+    return { iter: closeCond(iff.c).iter, runtime };
+  };
+
+  const closeStmt = (m) => {
+    const name = fresh('$closeResult');
+    const ret = E.member(m.iter, 'return');
+    return {
+      t: 'if',
+      c: E.bin('!=', ret, E.lit(null)),
+      a: [
+        { t: 'var', kind: 'const', name, e: E.call(ret, []), hint: 'closeResult' },
+        { t: 'if', c: E.bin('!==', E.un('typeof', E.id(name)), E.lit('object')), a: [{ t: 'expr', e: E.call(m.runtime, [E.id(name)]) }], b: null },
+      ],
+      b: null,
+    };
+  };
+
+  const walkList = (list, inFinally) => {
+    for (const s of list) {
+      if (s.t === 'fndecl') continue;
+      for (const b of childBlocks(s)) walkList(b, inFinally || (s.t === 'try' && b === s.finallyBody));
+    }
+    for (let i = 0; i < list.length; i++) {
+      if (!inFinally) continue;
+      const s = list[i];
+      const m = match(s);
+      if (m) { list[i] = closeStmt(m); continue; }
+      if (s.t === 'if' && !s.b) {
+        const cond = s.c;
+        const isToken = cond && (cond.k === 'id' || (cond.k === 'un' && cond.op === '!' && cond.e.k === 'id'));
+        if (!isToken) continue;
+        const ti = s.a.findIndex(x => x.t === 'try');
+        if (ti >= 0) {
+          const tm = match(s.a[ti]);
+          const rest = s.a.filter((_, j) => j !== ti);
+          if (tm && rest.every(x => x.t === 'decl' || x.t === 'comment' || isCloseIf(x))) list[i] = closeStmt(tm);
+        } else if (s.a.some(isCloseIf) && s.a.every(x => x.t === 'decl' || x.t === 'comment' || isCloseIf(x))) {
+          list.splice(i, 1, ...s.a);
+        }
+      }
+    }
+    if (inFinally) {
+      const truth = (e) => e && e.k === 'lit' ? !!e.v : (e && e.k === 'un' && e.op === '!' && e.e && e.e.k === 'lit' ? !e.e.v : null);
+      for (let i = list.length - 1; i >= 0; i--) {
+        const s = list[i];
+        if (s.t !== 'if') continue;
+        const v = truth(s.c);
+        if (v === true) list.splice(i, 1, ...s.a);
+        else if (v === false) list.splice(i, 1, ...(s.b || []));
+      }
+    }
+  };
+  walkList(root, false);
+}
+
+// A temp can be declared with `let` inside one branch and used from a sibling
+// branch (its register is live across the join). Keep the declaration in a
+// block that dominates every use: hoist it to the nearest common ancestor and
+// turn the original declaration into an assignment.
+function hoistSiblingTemps(root) {
+  const blocks = [];
+  const parent = new Map();
+  const index = (list, par) => {
+    blocks.push(list);
+    parent.set(list, par);
+    for (const s of list) {
+      if (s.t === 'fndecl') continue;
+      for (const b of childBlocks(s)) index(b, list);
+    }
+  };
+  index(root, null);
+
+  const decls = new Map();
+  for (const list of blocks) {
+    for (const s of list) {
+      if (s.t === 'var' && isTemp(s.name) && !s.destruct) {
+        if (!decls.has(s.name)) decls.set(s.name, []);
+        decls.get(s.name).push({ list, s, name: s.name });
+      } else if (s.t === 'decl') {
+        for (const n of s.names) {
+          if (!isTemp(n)) continue;
+          if (!decls.has(n)) decls.set(n, []);
+          decls.get(n).push({ list, s, name: n });
+        }
+      }
+    }
+  }
+
+  const refs = new Map();
+  const addRef = (n, list) => {
+    if (!isTemp(n)) return;
+    if (!refs.has(n)) refs.set(n, new Set());
+    refs.get(n).add(list);
+  };
+  for (const list of blocks) {
+    for (const s of list) {
+      for (const [o, k] of stmtExprs(s)) walkNoFn(o[k], n => { if (n.k === 'id') addRef(n.name, list); });
+      if (s.t === 'forin') {
+        addRef(s.name, list);
+        if (s.destruct) for (const n of s.destruct) addRef(n, list);
+      }
+    }
+  }
+
+  const isDescendant = (list, anc) => {
+    for (let p = list; p; p = parent.get(p)) if (p === anc) return true;
+    return false;
+  };
+  const lca = (a, b) => {
+    const seen = new Set();
+    for (let p = a; p; p = parent.get(p)) seen.add(p);
+    for (let p = b; p; p = parent.get(p)) if (seen.has(p)) return p;
+    return root;
+  };
+
+  const targets = new Map();
+  const convert = new Set();
+  const drop = new Map();
+  for (const [name, ds] of decls) {
+    const rs = refs.get(name);
+    if (!rs) continue;
+    if (!ds.some(d => [...rs].some(r => !isDescendant(r, d.list)))) continue;
+    let target = ds[0].list;
+    for (const d of ds) target = lca(target, d.list);
+    for (const r of rs) target = lca(target, r);
+    if (!targets.has(target)) targets.set(target, []);
+    targets.get(target).push(name);
+    for (const d of ds) {
+      if (d.s.t === 'var') convert.add(d.s);
+      else {
+        if (!drop.has(d.s)) drop.set(d.s, new Set());
+        drop.get(d.s).add(name);
+      }
+    }
+  }
+  if (!targets.size) return;
+
+  for (const list of blocks) {
+    for (let i = list.length - 1; i >= 0; i--) {
+      const s = list[i];
+      if (drop.has(s)) {
+        s.names = s.names.filter(n => !drop.get(s).has(n));
+        if (!s.names.length) list.splice(i, 1);
+      } else if (convert.has(s)) {
+        if (s.e) list[i] = { t: 'expr', e: E.assign(E.id(s.name), s.e), pos: s.pos };
+        else list.splice(i, 1);
+      }
+    }
+  }
+  for (const [list, names] of targets) {
+    list.unshift(...names.map(name => ({ t: 'var', kind: 'let', name })));
+  }
+}
+
 function process(info, opts = {}) {
   const body = info.body;
   stripWrapperPrologue(body, true);
@@ -1676,7 +1963,9 @@ function process(info, opts = {}) {
   }
   recoverParams(info);
   applyTemplates(body);
+  simplifyIteratorClose(body);
+  hoistSiblingTemps(body);
   reorderHoistedFunctions(body);
   return info;
 }
-module.exports = { process, rename };
+module.exports = { process, rename, hoistSiblingTemps, simplifyIteratorClose };
