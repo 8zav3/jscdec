@@ -175,7 +175,10 @@ class Program {
     const numMap = this.sfiMap === 17 ? 20 : this.sfiMap + 5;
     const bigIntMap = this.sfiMap === 17 ? 48 : this.bcMap - 2;
     if (m === numMap) { const b = rawBytes(o, 1, this.h.W === 8 ? 2 : 3); return { kind: 'num', value: b.readDoubleLE(0) }; }
-    if (m === bigIntMap) { const b = rawBytes(o, 2, o.size); return { kind: 'bigint', value: '0x' + b.readBigUInt64LE(0).toString(16).toUpperCase() + 'n' }; }
+    if (m === bigIntMap) {
+      const b = o.size > 2 ? rawBytes(o, 2, o.size) : Buffer.alloc(0);
+      return { kind: 'bigint', value: '0x' + decodeBigIntBytes(b).toString(16).toUpperCase() + 'n' };
+    }
     if (m === this.objDescMap) return { kind: 'objdesc', obj: o };
     if (o.size === 3 && m >= 600 && o.words[1]?.t === 'raw' && (o.words[2]?.t === 'obj' || o.words[2]?.t === 'root')) return { kind: 'arrdesc', obj: o };
     if ((o.size === 8 && m >= 600 && o.words[1]?.t === 'raw') || (o.size === 9 && m === 12 && o.words[1]?.t === 'raw' && o.words[1].v === 14 && o.words[2]?.t === 'raw')) return { kind: 'classdesc', obj: o };
@@ -395,4 +398,12 @@ class Program {
   }
 }
 
-module.exports = { Program, KINDS };
+// BigInt digits are stored little-endian in the words following the map and
+// length. A zero BigInt has no digit words at all.
+function decodeBigIntBytes(buf) {
+  let value = 0n;
+  for (let i = buf.length - 1; i >= 0; i--) value = (value << 8n) | BigInt(buf[i]);
+  return value;
+}
+
+module.exports = { Program, KINDS, decodeBigIntBytes };

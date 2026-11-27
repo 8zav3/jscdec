@@ -89,7 +89,7 @@ function expr(e, ind = '') {
   }
 }
 function callee(e, ind) {
-  const f = e.fn;
+  const f = e.fn || { k: 'id', name: 'undefined' };
   if (f.k === 'member' || f.k === 'index') {
     return expr(f, ind);
   }
