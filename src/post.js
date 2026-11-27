@@ -52,7 +52,7 @@ function stmtExprs(s) {
     case 'if': case 'while': case 'dowhile': add(s, 'c'); break;
     case 'for': add(s, 'c'); break;
     case 'forin': add(s, 'e'); break;
-    case 'switch': add(s, 'd'); break;
+    case 'switch': add(s, 'd'); for (const c of s.cases) add(c, 'test'); break;
   }
   return r;
 }
@@ -1169,8 +1169,10 @@ function rename(info, usedOuter = new Set(), outerObfMap = new Map()) {
       }
       if (s.t === 'decl') s.names = s.names.map(n => (isTemp(n) || isObfName(n)) ? allocName(n, propHints.get(n) || assignHints.get(n) || sinkHints.get(n) || 'tmp') : n);
       if (s.t === 'for') {
-        if (s.init) s.init = s.init.replace(/\$[a-z]\d+/g, m => allocName(m, 'i'));
-        if (s.update) s.update = s.update.replace(/\$[a-z]\d+/g, m => allocName(m, 'i'));
+        // init/update are stored as source strings, so they bypass mapExpr.
+        const renameText = (txt) => txt.replace(/\b[A-Za-z_$][\w$]*\b/g, n => map.get(n) || n);
+        if (s.init) s.init = renameText(s.init).replace(/\$[a-z]\d+/g, m => allocName(m, 'i'));
+        if (s.update) s.update = renameText(s.update).replace(/\$[a-z]\d+/g, m => allocName(m, 'i'));
       }
       if (s.t === 'forin' && s.destruct) {
         const isEntries = s.e && s.e.k === 'call' && s.e.fn.k === 'member' && s.e.fn.prop === 'entries';

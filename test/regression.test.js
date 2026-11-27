@@ -59,6 +59,17 @@ test('Destructured parameter temps stay consistent', () => {
   assert.match(out, /\(\[k, v\]\) =>/);
 });
 
+test('Parameters inside for-init and switch-case are renamed', () => {
+  const out = decompileFile(path.join(ROOT, 'test-jsc', '06-loop-switch-params.node20.jsc'));
+  // for init/update are stored as strings and switch case tests are separate
+  // AST nodes; both used to keep raw a0/a1 names after the signature was
+  // renamed to arg/arg2/...
+  assert.doesNotMatch(out, /\ba[0-9]\b/);
+  assert.match(out, /for \(let i = arg; /);
+  assert.match(out, /case arg3:/);
+  assert.match(out, /case arg4:/);
+});
+
 test('All .jsc files in test-jsc/ decompile without error', () => {
   const files = fs.readdirSync(path.join(ROOT, 'test-jsc')).filter(f => f.endsWith('.jsc'));
   assert.ok(files.length >= 36);
