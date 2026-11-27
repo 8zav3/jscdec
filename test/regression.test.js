@@ -38,6 +38,19 @@ test('Node.js 20.20.2 Bytenode-style .jsc files decompile cleanly', () => {
   assert.match(classesOut, /async verify\(/);
 });
 
+test('Generated temp names are not renamed twice', () => {
+  const out = decompileFile(path.join(ROOT, 'test-jsc', '02-router-names.node20.jsc'));
+  // The limiter temp must keep one name across its declaration and all call
+  // arguments. A second rename pass used to turn the generated `...Res` name
+  // into an undeclared `val`.
+  const decl = out.match(/const\s+([A-Za-z_$][\w$]*)\s*=\s*expressRateLimit\(/);
+  assert.ok(decl, 'limiter declaration');
+  const args = [...out.matchAll(/\.post\("\/route\d+",\s*([A-Za-z_$][\w$]*)/g)].map(m => m[1]);
+  assert.equal(args.length, 5);
+  for (const arg of args) assert.equal(arg, decl[1]);
+  assert.doesNotMatch(out, /\.post\("[^"]*",\s*val\b/);
+});
+
 test('All .jsc files in test-jsc/ decompile without error', () => {
   const files = fs.readdirSync(path.join(ROOT, 'test-jsc')).filter(f => f.endsWith('.jsc'));
   assert.ok(files.length >= 36);

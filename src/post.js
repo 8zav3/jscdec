@@ -1120,10 +1120,10 @@ function rename(info, usedOuter = new Set(), outerObfMap = new Map()) {
     if (map.has(t)) return map.get(t);
     if (!base) base = propHints.get(t) || assignHints.get(t) || sinkHints.get(t) || (counterVars.has(t) ? 'count' : 'val');
     if (base && !RESERVED.has(base) && ID.test(base)) {
-      if (!names.has(base)) { names.add(base); map.set(t, base); if (isObfName(t)) obfMap.set(t, base); return base; }
+      if (!names.has(base)) { names.add(base); map.set(t, base); if (!map.has(base)) map.set(base, base); if (isObfName(t)) obfMap.set(t, base); return base; }
       for (let k = 2; k <= 99; k++) {
         const cand = base + k;
-        if (!names.has(cand)) { names.add(cand); map.set(t, cand); if (isObfName(t)) obfMap.set(t, cand); return cand; }
+        if (!names.has(cand)) { names.add(cand); map.set(t, cand); if (!map.has(cand)) map.set(cand, cand); if (isObfName(t)) obfMap.set(t, cand); return cand; }
       }
     }
     const pre = isObfName(t) ? 'val' : 'val';
@@ -1131,6 +1131,7 @@ function rename(info, usedOuter = new Set(), outerObfMap = new Map()) {
     do { n = pre + (counters[pre] = (counters[pre] === undefined ? 2 : counters[pre] + 1)); } while (names.has(n));
     names.add(n);
     map.set(t, n);
+    if (!map.has(n)) map.set(n, n);
     if (isObfName(t)) obfMap.set(t, n);
     return n;
   };
