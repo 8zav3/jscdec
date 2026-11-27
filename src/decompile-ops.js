@@ -27,6 +27,8 @@ P.constExpr = function (v, st) {
     case 'sfi': return this.closure(v.obj, st);
     case 'objdesc': return this.objLiteral(v.obj, st);
     case 'arrdesc': return this.arrLiteral(v.obj);
+    case 'emptyobj': return E.obj([]);
+    case 'emptyarr': return E.arr([]);
     case 'classdesc': return { k: 'classdesc', obj: v.obj };
     default: return v.ref ? E.id('$' + v.ref) : E.raw('undefined /*const:' + (v.type || v.kind) + '*/');
   }
@@ -90,6 +92,12 @@ P.emitStore = function (st, out, target) {
   const v = this.take(st);
   if (v.k === 'hole') return;
   if (v.k === 'fn' && v.info.name && !v.info.isClass && /^(Normal|Async|Gen|AsyncGen)$/.test(v.info.kind) && target.k === 'id' && target.name === v.info.name) { out.push({ t: 'fndecl', info: v.info }); return; }
+  // Track object/array assignments so later Define*Property ops can fill the
+  // literal's pending properties instead of falling back to defineProperty.
+  if (target.k === 'id') {
+    if (v.k === 'obj' || v.k === 'arr') this.tempDefs.set(target.name, v);
+    else this.tempDefs.delete(target.name);
+  }
   out.push({ t: 'expr', e: E.assign(target, v) });
 };
 P.keyOf = function (v) { return v.kind === 'str' ? v.value : v.kind === 'smi' ? String(v.value) : v.ref ? '$' + v.ref : '?'; };

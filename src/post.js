@@ -1586,6 +1586,268 @@ function deobfuscate0x(info) {
   return true;
 }
 
+let definedTempSerial = 0;
+
+function writesAfter(body, id, from) {
+  const writesIn = (st) => {
+    let w = false;
+    for (const [o, k] of stmtExprs(st)) walkNoFn(o[k], n => {
+      if (n.k === 'assign' && n.target.k === 'id' && n.target.name === id) w = true;
+      if (n.k === 'un' && (n.op === '++' || n.op === '--') && n.e.k === 'id' && n.e.name === id) w = true;
+    });
+    if (st.t === 'var' && st.name === id) w = true;
+    if (st.t === 'decl' && st.names.includes(id)) w = true;
+    if (st.t === 'forin' && st.name === id) w = true;
+    if (!w && st.t !== 'fndecl') for (const b of childBlocks(st)) if (b.some(writesIn)) { w = true; break; }
+    return w;
+  };
+  for (let k = from + 1; k < body.length; k++) if (writesIn(body[k])) return true;
+  return false;
+}
+
+function mergeDefinedProperties(body) {
+  for (let i = 0; i < body.length; i++) {
+    const s = body[i];
+    let name = null;
+    let obj = null;
+    if (s.t === 'var' && s.e && s.e.k === 'obj' && typeof s.name === 'string') {
+      name = s.name; obj = s.e;
+    } else if (s.t === 'expr' && s.e && s.e.k === 'assign' && s.e.op === '=' &&
+               s.e.target && s.e.target.k === 'id' && s.e.value && s.e.value.k === 'obj') {
+      name = s.e.target.name; obj = s.e.value;
+    }
+    if (!obj || !Array.isArray(obj.props)) continue;
+    let j = i + 1;
+    while (j < body.length) {
+      const t = body[j];
+      if (!(t.t === 'expr' && t.e && t.e.k === 'call' && t.e.fn && t.e.fn.k === 'member' &&
+            t.e.fn.obj && t.e.fn.obj.k === 'id' && t.e.fn.obj.name === 'Object' &&
+            t.e.fn.prop === 'defineProperty')) break;
+      const [tgt, key, desc] = t.e.args || [];
+      if (!(tgt && tgt.k === 'id' && tgt.name === name && key && key.k === 'lit' &&
+            desc && desc.k === 'obj' && Array.isArray(desc.props))) break;
+      const val = desc.props.find(p => p.key === 'value');
+      const prop = obj.props.find(p => p.kind === 'pending' && p.key === key.v);
+      if (!val || !prop) break;
+      prop.value = val.value;
+      prop.kind = 'init';
+      body.splice(j, 1);
+    }
+    // The remaining pending properties are initialized after interleaved
+    // computations. Capture each descriptor value at its original position,
+    // then move the literal after the last capture. This keeps evaluation
+    // order, property order, and values, and removes the defineProperty calls.
+    if (obj.props.some(p => p.kind === 'pending')) {
+      const entries = [];
+      let last = -1;
+      for (let j = i + 1; j < body.length; j++) {
+        const t = body[j];
+        if (t.t === 'expr' && t.e && t.e.k === 'call' && t.e.fn && t.e.fn.k === 'member' &&
+            t.e.fn.obj && t.e.fn.obj.k === 'id' && t.e.fn.obj.name === 'Object' &&
+            t.e.fn.prop === 'defineProperty' && t.e.args && t.e.args[0] &&
+            t.e.args[0].k === 'id' && t.e.args[0].name === name) {
+          const key = t.e.args[1], desc = t.e.args[2];
+          const val = desc && desc.k === 'obj' ? desc.props.find(p => p.key === 'value') : null;
+          if (key && key.k === 'lit' && val) {
+            const prop = obj.props.find(p => p.kind === 'pending' && p.key === key.v);
+            if (prop) { entries.push({ j, prop, key: key.v, value: val.value }); last = j; }
+          }
+          continue;
+        }
+        if (t.t === 'var' && t.name === name) break;
+        if (t.t === 'decl' && t.names.includes(name)) break;
+        if (t.t === 'fndecl' || t.t === 'return' || t.t === 'throw' || t.t === 'break' || t.t === 'continue') break;
+        if (usesName(t, name)) break;
+      }
+      if (entries.length) {
+        const entryAt = new Map(entries.map(e => [e.j, e]));
+        const captureAt = new Map();
+        for (const e of entries) {
+          const v = e.value;
+          let expr = v;
+          // A stable id already has the right value when the literal is moved
+          // after the call; anything else is captured at its original point.
+          if (!(v.k === 'id' && !writesAfter(body, v.name, e.j)) && !['lit', 'raw', 'undef', 'true', 'false', 'null'].includes(v.k)) {
+            const tmp = '$dp' + (definedTempSerial++);
+            captureAt.set(e.j, { t: 'var', kind: 'const', name: tmp, e: v, hint: e.key });
+            expr = E.id(tmp);
+          }
+          e.prop.value = expr;
+          e.prop.kind = 'init';
+        }
+        const lit = body[i];
+        const rest = [];
+        let placed = false;
+        for (let k = 0; k < body.length; k++) {
+          if (k === i) continue;
+          if (entryAt.has(k)) {
+            const c = captureAt.get(k);
+            if (c) rest.push(c);
+            if (k === last) { rest.push(lit); placed = true; }
+            continue;
+          }
+          rest.push(body[k]);
+          if (k === last) { rest.push(lit); placed = true; }
+        }
+        if (!placed) rest.push(lit);
+        body.length = 0;
+        body.push(...rest);
+      }
+    }
+  }
+  for (const s of body) for (const b of childBlocks(s)) mergeDefinedProperties(b);
+}
+
+// A `for (const item of map)` loop whose item is array-destructured and whose
+// value is then object-destructured can lose the second destructuring when the
+// value register is merged away. Detect the pattern and recover
+// `const { a, b } = value` plus `value.<extraProp>[a]` uses.
+function recoverMapDestructuring(body) {
+  for (const s of body) if (s.t !== 'fndecl') for (const b of childBlocks(s)) recoverMapDestructuring(b);
+  for (const s of body) {
+    if (s.t !== 'forin' || !s.of || !s.e || s.e.k !== 'id') continue;
+    const loopName = s.name;
+    const mapName = s.e.name;
+    const names = new Set();
+    for (const st of s.body) if (st.t === 'decl') for (const n of st.names) names.add(n);
+    if (!names.size) continue;
+    const arrIdx = s.body.findIndex(st => st.t === 'var' && Array.isArray(st.destruct) && st.e && st.e.k === 'id' && st.e.name === loopName);
+    if (arrIdx < 0 || s.body[arrIdx].destruct.length < 2) continue;
+    const valueName = s.body[arrIdx].destruct[1];
+    const uses = new Set();
+    const scanUses = (list) => {
+      for (const st of list) {
+        for (const [o, k] of stmtExprs(st)) walkNoFn(o[k], n => {
+          if (n.k === 'index' && n.obj.k === 'undef' && n.key.k === 'id' && names.has(n.key.name)) uses.add(n.key.name);
+        });
+        if (st.t !== 'fndecl') for (const b of childBlocks(st)) scanUses(b);
+      }
+    };
+    scanUses(s.body);
+    if (!uses.size || [...names].some(n => !uses.has(n))) continue;
+    const props = new Map();
+    const findSet = (list) => {
+      for (const st of list) {
+        for (const [o, k] of stmtExprs(st)) walkNoFn(o[k], n => {
+          if (n.k === 'call' && n.fn.k === 'member' && n.fn.prop === 'set' &&
+              n.fn.obj.k === 'id' && n.fn.obj.name === mapName && n.args[1] && n.args[1].k === 'obj') {
+            for (const p of n.args[1].props) if (typeof p.key === 'string') props.set(p.key, (props.get(p.key) || 0) + 1);
+          }
+        });
+        if (st.t !== 'fndecl') for (const b of childBlocks(st)) findSet(b);
+      }
+    };
+    findSet(body);
+    const extra = [...props.keys()].filter(k => !names.has(k));
+    if (extra.length !== 1) continue;
+    const extraProp = extra[0];
+    s.body = s.body.filter(st => st.t !== 'decl');
+    const di = s.body.findIndex(st => st.t === 'var' && Array.isArray(st.destruct) && st.e && st.e.k === 'id' && st.e.name === loopName);
+    if (di < 0) continue;
+    s.body.splice(di + 1, 0, { t: 'var', kind: 'const', name: `{ ${[...uses].join(', ')} }`, e: E.id(valueName) });
+    const replace = (list) => {
+      for (const st of list) {
+        for (const [o, k] of stmtExprs(st)) o[k] = mapExpr(o[k], n => {
+          if (n.k === 'index' && n.obj.k === 'undef' && n.key.k === 'id' && uses.has(n.key.name)) {
+            return E.index(E.member(E.id(valueName), extraProp), n.key);
+          }
+          return null;
+        });
+        if (st.t !== 'fndecl') for (const b of childBlocks(st)) replace(b);
+      }
+    };
+    replace(s.body);
+  }
+}
+
+// Generator methods lower `yield value` to InvokeIntrinsic 14
+// (CreateIterResultObject) plus a Suspend/Resume state machine. Rebuild the
+// source-level `yield` and drop the synthetic prologue/dispatch artifacts.
+function recoverGeneratorYield(info) {
+  if (!info || !info.generator || !Array.isArray(info.body)) return;
+  const isIntr = (e, id) => !!(e && e.k === 'call' && e.fn && e.fn.k === 'id' &&
+    (e.fn.name === '%Intrinsic' + id || e.fn.name === '__Intrinsic' + id));
+  const dropArtifacts = (list, i, name) => {
+    let j = i + 1;
+    while (j < list.length) {
+      const t = list[j];
+      if (t.t === 'comment' && /switch-table/.test(t.text)) { list.splice(j, 1); continue; }
+      if (name && (t.t === 'throw' || t.t === 'return') && t.e && t.e.k === 'id' && t.e.name === name) { list.splice(j, 1); continue; }
+      break;
+    }
+  };
+  const walk = (list) => {
+    for (let i = 0; i < list.length; i++) {
+      const s = list[i];
+      if ((s.t === 'var' || s.t === 'expr') && isIntr(s.e, 8)) {
+        const name = s.t === 'var' ? s.name : null;
+        list.splice(i, 1);
+        dropArtifacts(list, i - 1, name);
+        i--;
+        continue;
+      }
+      if ((s.t === 'var' || s.t === 'expr') && isIntr(s.e, 14)) {
+        const args = s.e.args || [];
+        const value = args[0] || E.undef();
+        const done = args[1] && args[1].k === 'lit' && args[1].v === true;
+        const name = s.t === 'var' ? s.name : null;
+        list[i] = done ? { t: 'return', e: value, pos: s.pos } : { t: 'expr', e: E.yield_(value, false), pos: s.pos };
+        dropArtifacts(list, i, name);
+        continue;
+      }
+      if (s.t !== 'fndecl') for (const b of childBlocks(s)) walk(b);
+    }
+  };
+  walk(info.body);
+}
+
+// V8 builds an object literal with a spread from a temp that it assigns a few
+// instructions later. When the temp declaration ends up after the literal, the
+// output throws `Cannot access ... before initialization`. Move the declaration
+// before the first statement that spreads it.
+function hoistSpreadDecls(list) {
+  for (const s of list) for (const b of childBlocks(s)) hoistSpreadDecls(b);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (let i = 0; i < list.length; i++) {
+      const s = list[i];
+      const ids = [];
+      const collect = (e) => {
+        if (!e || typeof e !== 'object') return;
+        if (e.k === 'obj') {
+          for (const p of e.props) {
+            if (p && p.kind === 'spread' && p.value && p.value.k === 'id' && isTemp(p.value.name)) ids.push(p.value.name);
+            else if (p && p.value) collect(p.value);
+          }
+          return;
+        }
+        for (const [, c] of kids(e)) collect(c);
+      };
+      for (const [o, k] of stmtExprs(s)) collect(o[k]);
+      if (!ids.length) continue;
+      const moved = [];
+      for (const id of new Set(ids)) {
+        for (let j = i + 1; j < list.length; j++) {
+          const d = list[j];
+          if (d.t === 'var' && d.name === id) {
+            if (s.t === 'var' && s.name && usesName(d, s.name)) break;
+            moved.push({ j, d });
+            break;
+          }
+        }
+      }
+      if (!moved.length) continue;
+      moved.sort((a, b) => b.j - a.j);
+      for (const m of moved) list.splice(m.j, 1);
+      moved.sort((a, b) => a.j - b.j);
+      list.splice(i, 0, ...moved.map(m => m.d));
+      changed = true;
+      i += moved.length;
+    }
+  }
+}
+
 function process(info, opts = {}) {
   const body = info.body;
   stripWrapperPrologue(body, true);
@@ -1601,6 +1863,7 @@ function process(info, opts = {}) {
     inlineBlock(body, c0, w0);
   }
   foldDecls(body);
+  mergeDefinedProperties(body);
   for (let pass = 0; pass < 4; pass++) {
     foldShortCircuit(body);
     const c2 = new Map(), w2 = new Map();
@@ -1679,4 +1942,4 @@ function process(info, opts = {}) {
   reorderHoistedFunctions(body);
   return info;
 }
-module.exports = { process, rename };
+module.exports = { process, rename, mergeDefinedProperties };

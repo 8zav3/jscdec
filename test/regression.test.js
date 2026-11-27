@@ -10,6 +10,8 @@ const { spawnSync } = require('node:child_process');
 const ROOT = path.resolve(__dirname, '..');
 const CLI = path.join(ROOT, 'bin', 'jscdec.js');
 const { decompileFile } = require('../src/index');
+const post = require('../src/post');
+const { E, stmt } = require('../src/ast');
 const { Heap } = require('../src/heap');
 const oracle = require('../src/oracle');
 
@@ -179,4 +181,23 @@ test('RC4 _0x string-array deobfuscation is opt-in and preserves decoder by defa
   const cliClean = runCli([sample, '--deobfuscate']);
   assert.equal(cliClean.status, 0);
   assert.match(cliClean.stdout, /const GREETING = "hello from the toy";/);
+});
+
+test('mergeDefinedProperties folds interleaved defineProperty calls', () => {
+  const obj = E.obj([
+    { key: 'a', value: null, kind: 'pending' },
+    { key: 'b', value: null, kind: 'pending' },
+  ]);
+  const body = [
+    { t: 'var', kind: 'const', name: 'x', e: obj },
+    { t: 'var', kind: 'const', name: 'y', e: E.lit(2) },
+    { t: 'expr', e: E.call(E.member(E.id('Object'), 'defineProperty'), [E.id('x'), E.lit('a'), E.obj([{ key: 'value', value: E.lit(1), kind: 'init' }])]) },
+    { t: 'expr', e: E.call(E.member(E.id('Object'), 'defineProperty'), [E.id('x'), E.lit('b'), E.obj([{ key: 'value', value: E.id('y'), kind: 'init' }])]) },
+  ];
+  post.mergeDefinedProperties(body);
+  const out = body.map(s => stmt(s, '')).filter(Boolean).join('\n');
+  assert.match(out, /a: 1/);
+  assert.match(out, /b: y/);
+  assert.doesNotMatch(out, /Object\.defineProperty/);
+  assert.ok(body.findIndex(s => s.t === 'var' && s.name === 'y') < body.findIndex(s => s.t === 'var' && s.name === 'x'));
 });
