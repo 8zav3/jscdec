@@ -52,7 +52,7 @@ function stmtExprs(s) {
     case 'if': case 'while': case 'dowhile': add(s, 'c'); break;
     case 'for': add(s, 'c'); break;
     case 'forin': add(s, 'e'); break;
-    case 'switch': add(s, 'd'); break;
+    case 'switch': add(s, 'd'); for (const c of s.cases) add(c, 'test'); break;
   }
   return r;
 }
@@ -1120,10 +1120,10 @@ function rename(info, usedOuter = new Set(), outerObfMap = new Map()) {
     if (map.has(t)) return map.get(t);
     if (!base) base = propHints.get(t) || assignHints.get(t) || sinkHints.get(t) || (counterVars.has(t) ? 'count' : 'val');
     if (base && !RESERVED.has(base) && ID.test(base)) {
-      if (!names.has(base)) { names.add(base); map.set(t, base); if (isObfName(t)) obfMap.set(t, base); return base; }
+      if (!names.has(base)) { names.add(base); map.set(t, base); if (!map.has(base)) map.set(base, base); if (isObfName(t)) obfMap.set(t, base); return base; }
       for (let k = 2; k <= 99; k++) {
         const cand = base + k;
-        if (!names.has(cand)) { names.add(cand); map.set(t, cand); if (isObfName(t)) obfMap.set(t, cand); return cand; }
+        if (!names.has(cand)) { names.add(cand); map.set(t, cand); if (!map.has(cand)) map.set(cand, cand); if (isObfName(t)) obfMap.set(t, cand); return cand; }
       }
     }
     const pre = isObfName(t) ? 'val' : 'val';
@@ -1131,9 +1131,21 @@ function rename(info, usedOuter = new Set(), outerObfMap = new Map()) {
     do { n = pre + (counters[pre] = (counters[pre] === undefined ? 2 : counters[pre] + 1)); } while (names.has(n));
     names.add(n);
     map.set(t, n);
+    if (!map.has(n)) map.set(n, n);
     if (isObfName(t)) obfMap.set(t, n);
     return n;
   };
+
+  // Destructured parameters are stored as one pattern string (e.g.
+  // "[$d0, $d1]"). Register their inner temp names and rename them in the
+  // pattern so body references get the same name instead of a fresh `val`.
+  const paramDestructHints = ['k', 'v', 'w', 'x', 'y', 'z'];
+  for (let i = 0; i < (info.params || []).length; i++) {
+    const pat = info.params[i];
+    if (typeof pat !== 'string' || !pat.includes('$')) continue;
+    let j = 0;
+    info.params[i] = pat.replace(/\$[A-Za-z_$][\w$]*/g, (t) => allocName(t, paramDestructHints[j++] || null));
+  }
 
   const fix = (body) => {
     for (const s of body) {
@@ -1157,8 +1169,10 @@ function rename(info, usedOuter = new Set(), outerObfMap = new Map()) {
       }
       if (s.t === 'decl') s.names = s.names.map(n => (isTemp(n) || isObfName(n)) ? allocName(n, propHints.get(n) || assignHints.get(n) || sinkHints.get(n) || 'tmp') : n);
       if (s.t === 'for') {
-        if (s.init) s.init = s.init.replace(/\$[a-z]\d+/g, m => allocName(m, 'i'));
-        if (s.update) s.update = s.update.replace(/\$[a-z]\d+/g, m => allocName(m, 'i'));
+        // init/update are stored as source strings, so they bypass mapExpr.
+        const renameText = (txt) => txt.replace(/\b[A-Za-z_$][\w$]*\b/g, n => map.get(n) || n);
+        if (s.init) s.init = renameText(s.init).replace(/\$[a-z]\d+/g, m => allocName(m, 'i'));
+        if (s.update) s.update = renameText(s.update).replace(/\$[a-z]\d+/g, m => allocName(m, 'i'));
       }
       if (s.t === 'forin' && s.destruct) {
         const isEntries = s.e && s.e.k === 'call' && s.e.fn.k === 'member' && s.e.fn.prop === 'entries';

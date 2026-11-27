@@ -38,6 +38,38 @@ test('Node.js 20.20.2 Bytenode-style .jsc files decompile cleanly', () => {
   assert.match(classesOut, /async verify\(/);
 });
 
+test('Generated temp names are not renamed twice', () => {
+  const out = decompileFile(path.join(ROOT, 'test-jsc', '02-router-names.node20.jsc'));
+  // The limiter temp must keep one name across its declaration and all call
+  // arguments. A second rename pass used to turn the generated `...Res` name
+  // into an undeclared `val`.
+  const decl = out.match(/const\s+([A-Za-z_$][\w$]*)\s*=\s*expressRateLimit\(/);
+  assert.ok(decl, 'limiter declaration');
+  const args = [...out.matchAll(/\.post\("\/route\d+",\s*([A-Za-z_$][\w$]*)/g)].map(m => m[1]);
+  assert.equal(args.length, 5);
+  for (const arg of args) assert.equal(arg, decl[1]);
+  assert.doesNotMatch(out, /\.post\("[^"]*",\s*val\b/);
+});
+
+test('Destructured parameter temps stay consistent', () => {
+  const out = decompileFile(path.join(ROOT, 'test-jsc', '03-destructured-params.node20.jsc'));
+  // The pattern is stored as one string ("[$d0, $d1]"). Its inner temps must
+  // be registered so the body uses the same names instead of `val`/`val2`.
+  assert.doesNotMatch(out, /\bval\d*\b/);
+  assert.match(out, /\(\[k, v\]\) =>/);
+});
+
+test('Parameters inside for-init and switch-case are renamed', () => {
+  const out = decompileFile(path.join(ROOT, 'test-jsc', '06-loop-switch-params.node20.jsc'));
+  // for init/update are stored as strings and switch case tests are separate
+  // AST nodes; both used to keep raw a0/a1 names after the signature was
+  // renamed to arg/arg2/...
+  assert.doesNotMatch(out, /\ba[0-9]\b/);
+  assert.match(out, /for \(let i = arg; /);
+  assert.match(out, /case arg3:/);
+  assert.match(out, /case arg4:/);
+});
+
 test('All .jsc files in test-jsc/ decompile without error', () => {
   const files = fs.readdirSync(path.join(ROOT, 'test-jsc')).filter(f => f.endsWith('.jsc'));
   assert.ok(files.length >= 36);
