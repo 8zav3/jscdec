@@ -257,7 +257,13 @@ P.step = function (ins, i, end, st, out, loop, ifctx) {
       const args = this.regList(st, o[1], o[2]);
       const id = this.prog.retCode <= 0xae ? ({ 0: 0, 1: 0, 2: 1, 3: 2, 4: 3, 11: 9, 14: 12 }[o[0]] ?? o[0]) : o[0];
       switch (id) {
-        case 1: put({ k: 'raw', text: '/*async-state*/' }); return nextI;
+        case 1: {
+          // %_AsyncFunctionEnter: the result is the generator state stored in
+          // register 0, not a source-level value. Skip the following Star0.
+          const nx = this.insns[i + 1];
+          if (nx && (nx.name === 'Star0' || (nx.name === 'Star' && nx.ops[0] === -7))) return i + 2;
+          return nextI;
+        }
         case 0: put(E.await_(args[1])); return nextI;
         case 3: put(args[1]); return nextI;
         case 2: put({ k: 'raw', text: '/*reject*/', reject: true }); return nextI;
