@@ -1,5 +1,10 @@
 'use strict';
 const OPS = require('./opcodes.json');
+const OPS146_RAW = require('./opcodes146.json');
+const OPS146 = OPS146_RAW.map(o => ({
+  ...o,
+  ops: o.ops.map(t => ({ kConstantPoolIndex: 'kIdx', kContextSlot: 'kIdx', kFeedbackSlot: 'kIdx', kCoverageSlot: 'kIdx' }[t] || t)),
+}));
 const filterOps = (base, rm = [], addAfter = {}, addBefore = {}) => {
   const out = [];
   for (const o of base) {
@@ -46,14 +51,14 @@ const OPS_V142_231 = filterOps(OPS_V138, [], {
 });
 const TABLES = {
   0xa9: OPS_V108, 0xaa: OPS_V114, 0xab: OPS_V122, 0xae: OPS_V124, 0xaf: OPS,
-  0xb3: OPS_W8, 0xb5: OPS_V138, 0xb6: OPS_V138, 0xb7: OPS_V142_231,
+  0xb3: OPS_W8, 0xb5: OPS_V138, 0xb6: OPS_V138, 0xb7: OPS146,
   v124: OPS_V124, w8: OPS_W8, v134: OPS_V134, v138: OPS_V138, v142: OPS_V142_231,
 };
 const byCode = OPS;
 
-const SCALABLE = new Set(['kReg', 'kRegOut', 'kRegList', 'kRegOutList', 'kRegPair', 'kRegOutPair', 'kRegOutTriple', 'kRegInOut', 'kIdx', 'kUImm', 'kImm', 'kRegCount', 'kNativeContextIndex']);
+const SCALABLE = new Set(['kReg', 'kRegOut', 'kRegList', 'kRegOutList', 'kRegPair', 'kRegOutPair', 'kRegOutTriple', 'kRegInOut', 'kIdx', 'kUImm', 'kImm', 'kRegCount']);
 const SIGNED = new Set(['kImm']);
-const FIXED = { kFlag8: 1, kFlag16: 2, kIntrinsicId: 1, kRuntimeId: 2 };
+const FIXED = { kFlag8: 1, kFlag16: 2, kIntrinsicId: 1, kRuntimeId: 2, kEmbeddedFeedback: 2, kNativeContextIndex: 1, kAbortReason: 1 };
 const REGISTERISH = new Set(['kReg', 'kRegOut', 'kRegList', 'kRegOutList', 'kRegPair', 'kRegOutPair', 'kRegOutTriple', 'kRegInOut']);
 
 function rd(buf, p, size, signed) {

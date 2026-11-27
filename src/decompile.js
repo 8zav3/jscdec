@@ -157,9 +157,18 @@ class FnDec {
   ctxVar(st, regOp, slot, depth) {
     let chain = st.chain;
     if (regOp !== undefined && regOp !== -1 && st.ctxRegs.has(-7 - regOp)) chain = st.ctxRegs.get(-7 - regOp);
-    const sc = chain[depth];
-    if (!sc) return E.raw('/*ctx' + depth + '.' + slot + '*/');
-    const nm = sc.names[slot - 2 - sc.extSlot];
+    // A function can reuse its outer context, and a pushed catch/block context
+    // can be transient. If the selected scope has no name at this slot, walk
+    // outward until a scope actually defines that context slot.
+    let nm = null;
+    for (let d = depth; d < chain.length; d++) {
+      const sc = chain[d];
+      if (!sc || !sc.names) continue;
+      const idx = slot - 2 - (sc.extSlot || 0);
+      if (idx < 0 || idx >= sc.names.length) continue; // slot not in this scope
+      if (sc.names[idx]) nm = sc.names[idx];
+      break; // slot is in range: its name (or lack of one) is authoritative
+    }
     return E.id(nm || ('ctx' + depth + '_' + slot));
   }
 

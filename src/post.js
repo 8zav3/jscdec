@@ -106,7 +106,7 @@ function stripWrapperPrologue(body, isTop = false) {
     if (s.t === 'decl') {
       s.names = s.names.filter(n => !['this', 'require', '__dirname', '__filename', 'module', 'exports'].includes(n));
       if (!s.names.length) { body.splice(i, 1); continue; }
-    } else if (s.t === 'expr' && s.e.k === 'assign' && s.e.op === '=' && s.e.target.k === 'id' && s.e.value.k === 'id' && s.e.target.name === s.e.value.name) {
+    } else if (s.t === 'expr' && s.e.k === 'assign' && s.e.op === '=' && s.e.target.k === 'id' && s.e.value?.k === 'id' && s.e.target.name === s.e.value.name) {
       body.splice(i, 1);
     } else if (isTop && s.t === 'return' && (!s.e || s.e.k === 'undef') && i === body.length - 1) {
       body.pop();
@@ -388,7 +388,7 @@ function foldObjectDestruct(list, counts, writes) {
 function foldCompoundAssign(body) {
   eachExprDeep(body, (o, k) => {
     o[k] = mapExpr(o[k], (n) => {
-      if (n.k === 'assign' && n.op === '=' && (n.target.k === 'id' || n.target.k === 'member') && n.value.k === 'bin') {
+      if (n.k === 'assign' && n.op === '=' && (n.target.k === 'id' || n.target.k === 'member') && n.value?.k === 'bin') {
         const sameTarget = JSON.stringify(n.target) === JSON.stringify(n.value.l);
         if (sameTarget) {
           const op = n.value.op;
@@ -793,7 +793,7 @@ function inferExprName(e, map) {
       const c = e.fn.name[0].toLowerCase() + e.fn.name.slice(1);
       if (ID.test(c) && !RESERVED.has(c)) return c;
     }
-    if (e.fn.k === 'call' && e.fn.fn.k === 'id' && e.fn.fn.name === 'require' && e.fn.args[0]?.k === 'lit') {
+    if (e.fn.k === 'call' && e.fn.fn?.k === 'id' && e.fn.fn?.name === 'require' && e.fn.args[0]?.k === 'lit') {
       return cleanIdent(e.fn.args[0].v);
     }
     return 'instance';
@@ -956,10 +956,10 @@ function rename(info, usedOuter = new Set(), outerObfMap = new Map()) {
         counterVars.add(n.target.name);
       }
       if (n.op === '=' && n.target.k === 'id' && (isTemp(n.target.name) || isObfName(n.target.name))) {
-        const rhsHint = inferExprName(n.value) || (n.value.k === 'id' && assignHints.get(n.value.name));
+        const rhsHint = inferExprName(n.value) || (n.value?.k === 'id' && assignHints.get(n.value.name));
         if (rhsHint && !assignHints.has(n.target.name)) assignHints.set(n.target.name, rhsHint);
       }
-      if (n.op === '=' && n.target.k === 'member' && ID.test(n.target.prop) && n.value.k === 'id') {
+      if (n.op === '=' && n.target.k === 'member' && ID.test(n.target.prop) && n.value?.k === 'id') {
         const cleanProp = n.target.prop.replace(/^_+/, '');
         if ((isParam(n.value.name) || isObfName(n.value.name)) && n.target.obj.k === 'id' && n.target.obj.name === 'this') {
           if (!paramUsageHints.has(n.value.name)) paramUsageHints.set(n.value.name, cleanProp);
@@ -968,7 +968,7 @@ function rename(info, usedOuter = new Set(), outerObfMap = new Map()) {
           if (!sinkHints.has(n.value.name)) sinkHints.set(n.value.name, cleanProp);
         }
       }
-      if (n.op === '=' && n.target.k === 'id' && !isTemp(n.target.name) && !isParam(n.target.name) && !isObfName(n.target.name) && n.value.k === 'id' && isTemp(n.value.name)) {
+      if (n.op === '=' && n.target.k === 'id' && !isTemp(n.target.name) && !isParam(n.target.name) && !isObfName(n.target.name) && n.value?.k === 'id' && isTemp(n.value.name)) {
         if (!sinkHints.has(n.value.name)) sinkHints.set(n.value.name, n.target.name);
       }
     }
@@ -981,7 +981,7 @@ function rename(info, usedOuter = new Set(), outerObfMap = new Map()) {
       }
     }
     if (n.k === 'call') {
-      const callee = n.fn.k === 'member' ? n.fn.prop : (n.fn.k === 'id' ? n.fn.name : null);
+      const callee = n.fn?.k === 'member' ? n.fn?.prop : (n.fn?.k === 'id' ? n.fn?.name : null);
       if (callee && FN_PARAM_HINTS[callee]) {
         const ph = FN_PARAM_HINTS[callee];
         n.args.forEach((arg, idx) => {
@@ -995,11 +995,11 @@ function rename(info, usedOuter = new Set(), outerObfMap = new Map()) {
           paramUsageHints.set(n.args[0].name, 'result');
         }
       }
-      if (n.fn.k === 'id' && isParam(n.fn.name) && !paramUsageHints.has(n.fn.name)) {
-        paramUsageHints.set(n.fn.name, 'cb');
+      if (n.fn?.k === 'id' && isParam(n.fn?.name) && !paramUsageHints.has(n.fn?.name)) {
+        paramUsageHints.set(n.fn?.name, 'cb');
       }
-      if (n.fn.k === 'member') {
-        const p = n.fn.prop;
+      if (n.fn?.k === 'member') {
+        const p = n.fn?.prop;
         const a0 = n.args[0];
         if ((p === 'readFile' || p === 'readFileSync' || p === 'writeFile' || p === 'writeFileSync' || p === 'statSync' || p === 'existsSync' || p === 'unlinkSync' || p === 'basename' || p === 'extname' || p === 'dirname') && a0?.k === 'id' && isParam(a0.name)) {
           paramUsageHints.set(a0.name, 'filePath');
@@ -1034,8 +1034,8 @@ function rename(info, usedOuter = new Set(), outerObfMap = new Map()) {
 
   const tagCallbacks = (body) => eachExprDeep(body, (o, k) => walkExpr(o[k], n => {
     if (n.k === 'call') {
-      const fnName = n.fn.k === 'member' ? n.fn.prop : (n.fn.k === 'id' ? n.fn.name : '');
-      const objName = n.fn.k === 'member' && n.fn.obj.k === 'id' ? n.fn.obj.name : '';
+      const fnName = n.fn?.k === 'member' ? n.fn?.prop : (n.fn?.k === 'id' ? n.fn?.name : '');
+      const objName = n.fn?.k === 'member' && n.fn.obj.k === 'id' ? n.fn.obj.name : '';
       const arg0Lit = n.args[0]?.k === 'lit' ? n.args[0].v : '';
       const lastArg = n.args[n.args.length - 1];
       if (lastArg && lastArg.k === 'fn') {
@@ -1077,7 +1077,7 @@ function rename(info, usedOuter = new Set(), outerObfMap = new Map()) {
         }
       }
     }
-    if (n.k === 'new' && n.fn.k === 'id' && n.fn.name === 'Promise' && n.args[0]?.k === 'fn') {
+    if (n.k === 'new' && n.fn?.k === 'id' && n.fn?.name === 'Promise' && n.args[0]?.k === 'fn') {
       n.args[0].info._paramHints = ['resolve', 'reject'];
     }
   }));
@@ -1243,7 +1243,7 @@ function deobfuscate0x(info) {
       let callsArr = false;
       let hasRc4Magic = false;
       eachExprDeep(s.info.body, (o, k) => walkExpr(o[k], n => {
-        if (n.k === 'call' && n.fn.k === 'id' && n.fn.name === arrFnName) callsArr = true;
+        if (n.k === 'call' && n.fn?.k === 'id' && n.fn?.name === arrFnName) callsArr = true;
         if (n.k === 'lit' && typeof n.v === 'string' && n.v.startsWith('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')) useB64 = true;
         if (n.k === 'lit' && n.v === 256) hasRc4Magic = true;
       }));
@@ -1327,7 +1327,7 @@ function deobfuscate0x(info) {
         if (s.t === 'var' && s.e && s.e.k === 'id' && aliases.has(s.e.name) && !aliases.has(s.name)) {
           aliases.add(s.name);
           changed = true;
-        } else if (s.t === 'expr' && s.e.k === 'assign' && s.e.op === '=' && s.e.target.k === 'id' && s.e.value.k === 'id' && aliases.has(s.e.value.name) && !aliases.has(s.e.target.name)) {
+        } else if (s.t === 'expr' && s.e.k === 'assign' && s.e.op === '=' && s.e.target.k === 'id' && s.e.value?.k === 'id' && aliases.has(s.e.value.name) && !aliases.has(s.e.target.name)) {
           aliases.add(s.e.target.name);
           changed = true;
         }
@@ -1343,7 +1343,7 @@ function deobfuscate0x(info) {
   collectAliases(body);
 
   const canResolveCall = (n) => {
-    if (!(n.k === 'call' && n.fn.k === 'id' && aliases.has(n.fn.name))) return false;
+    if (!(n.k === 'call' && n.fn?.k === 'id' && aliases.has(n.fn?.name))) return false;
     if (!useRc4) return n.args.length === 1 && n.args[0].k === 'lit' && typeof n.args[0].v === 'number';
     return n.args.length === 2 && n.args[0].k === 'lit' && typeof n.args[0].v === 'number' && n.args[1].k === 'lit' && typeof n.args[1].v === 'string';
   };
@@ -1354,7 +1354,7 @@ function deobfuscate0x(info) {
       if (skipTop && (i === arrFnIdx || i === decFnIdx || i === iifeIdx)) continue;
       const s = list[i];
       for (const [o, k] of stmtExprs(s)) walkExpr(o[k], n => {
-        if (n.k === 'call' && n.fn.k === 'id' && aliases.has(n.fn.name) && !canResolveCall(n)) {
+        if (n.k === 'call' && n.fn?.k === 'id' && aliases.has(n.fn?.name) && !canResolveCall(n)) {
           hasUnresolved = true;
         }
         if (n.k === 'fn' && n.info?.body) checkUnresolved(n.info.body, false);
@@ -1380,7 +1380,7 @@ function deobfuscate0x(info) {
             scopeAliases.add(s.name);
             list.splice(i, 1);
             changed = true;
-          } else if (s.t === 'expr' && s.e.k === 'assign' && s.e.op === '=' && s.e.target.k === 'id' && s.e.value.k === 'id' && scopeAliases.has(s.e.value.name)) {
+          } else if (s.t === 'expr' && s.e.k === 'assign' && s.e.op === '=' && s.e.target.k === 'id' && s.e.value?.k === 'id' && scopeAliases.has(s.e.value.name)) {
             scopeAliases.add(s.e.target.name);
             list.splice(i, 1);
             changed = true;
@@ -1399,7 +1399,7 @@ function deobfuscate0x(info) {
     const replaceAllDecoderCalls = (list) => {
       eachExprDeep(list, (o, k) => {
         o[k] = mapExpr(o[k], n => {
-          if (n.k === 'call' && n.fn.k === 'id' && scopeAliases.has(n.fn.name)) {
+          if (n.k === 'call' && n.fn?.k === 'id' && scopeAliases.has(n.fn?.name)) {
             if (!useRc4 && n.args.length === 1 && n.args[0].k === 'lit' && typeof n.args[0].v === 'number') {
               return E.lit(getStr(n.args[0].v));
             }
@@ -1468,8 +1468,8 @@ function deobfuscate0x(info) {
                 const val = proxies.get(n.obj.name).map.get(prop);
                 if (val && val.k === 'lit') return E.lit(val.v);
               }
-              if (n.k === 'call' && (n.fn.k === 'member' || (n.fn.k === 'index' && n.fn.key.k === 'lit')) && n.fn.obj.k === 'id' && proxies.has(n.fn.obj.name)) {
-                const prop = n.fn.k === 'member' ? n.fn.prop : n.fn.key.v;
+              if (n.k === 'call' && (n.fn?.k === 'member' || (n.fn?.k === 'index' && n.fn?.key.k === 'lit')) && n.fn.obj.k === 'id' && proxies.has(n.fn.obj.name)) {
+                const prop = n.fn?.k === 'member' ? n.fn?.prop : n.fn?.key.v;
                 const val = proxies.get(n.fn.obj.name).map.get(prop);
                 if (val && val.k === 'fn' && val.info.body.length === 1 && val.info.body[0].t === 'return') {
                   const ret = val.info.body[0].e;
@@ -1577,7 +1577,7 @@ function deobfuscate0x(info) {
 
   for (let i = 0; i < body.length - 2; i++) {
     const s0 = body[i], s1 = body[i + 1], s2 = body[i + 2];
-    if (s0.t === 'var' && s0.e?.k === 'fn' && s0.e.info.isClass && s1.t === 'var' && s1.e?.k === 'id' && s1.e.name === s0.name && s2.t === 'expr' && s2.e.k === 'assign' && s2.e.target.k === 'member' && s2.e.target.obj.k === 'id' && s2.e.target.obj.name === 'module' && s2.e.target.prop === 'exports' && s2.e.value.k === 'id' && (s2.e.value.name === s0.name || s2.e.value.name === s1.name)) {
+    if (s0.t === 'var' && s0.e?.k === 'fn' && s0.e.info.isClass && s1.t === 'var' && s1.e?.k === 'id' && s1.e.name === s0.name && s2.t === 'expr' && s2.e.k === 'assign' && s2.e.target.k === 'member' && s2.e.target.obj.k === 'id' && s2.e.target.obj.name === 'module' && s2.e.target.prop === 'exports' && s2.e.value?.k === 'id' && (s2.e.value.name === s0.name || s2.e.value.name === s1.name)) {
       s2.e.value = s0.e;
       body.splice(i, 2);
       break;
@@ -1616,7 +1616,7 @@ function process(info, opts = {}) {
           const s0 = list[i], s1 = list[i + 1];
           if (s0.t === 'var' && isTemp(s0.name) && s0.e?.k === 'lit' && typeof s0.e.v === 'string' && ID.test(s0.e.v) &&
               s1.t === 'expr' && s1.e.k === 'assign' && s1.e.op === '=' && s1.e.target.k === 'index' && s1.e.target.key.k === 'id' && s1.e.target.key.name === s0.name &&
-              s1.e.value.k === 'bin' && (s1.e.value.op === '+' || s1.e.value.op === '-') && s1.e.value.r.k === 'lit' && s1.e.value.r.v === 1 &&
+              s1.e.value?.k === 'bin' && (s1.e.value.op === '+' || s1.e.value.op === '-') && s1.e.value.r.k === 'lit' && s1.e.value.r.v === 1 &&
               s1.e.value.l.k === 'index' && JSON.stringify(s1.e.value.l.obj) === JSON.stringify(s1.e.target.obj) && s1.e.value.l.key.k === 'id' && s1.e.value.l.key.name === s0.name) {
             list.splice(i, 2, { t: 'expr', e: { k: 'un', op: s1.e.value.op === '+' ? '++' : '--', e: E.member(s1.e.target.obj, s0.e.v), post: true }, pos: s1.pos });
             i--;

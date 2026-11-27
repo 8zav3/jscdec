@@ -75,6 +75,7 @@ const VHASH_NAMES = {
   '79dafe74': 'V8 12.4 x64 (Node.js 22)',
   '00e4c20b': 'V8 11.3 x64 (Node.js 20)',
   '8f50e237': 'V8 14.2 (Electron 39)',
+  '97ffbd52': 'V8 14.6.202.34 (Node 26.13.1, linux-arm64)',
 };
 
 class Program {
@@ -175,7 +176,10 @@ class Program {
     const numMap = this.sfiMap === 17 ? 20 : this.sfiMap + 5;
     const bigIntMap = this.sfiMap === 17 ? 48 : this.bcMap - 2;
     if (m === numMap) { const b = rawBytes(o, 1, this.h.W === 8 ? 2 : 3); return { kind: 'num', value: b.readDoubleLE(0) }; }
-    if (m === bigIntMap) { const b = rawBytes(o, 2, o.size); return { kind: 'bigint', value: '0x' + b.readBigUInt64LE(0).toString(16).toUpperCase() + 'n' }; }
+    if (m === bigIntMap) {
+      const b = o.size > 2 ? rawBytes(o, 2, o.size) : Buffer.alloc(0);
+      return { kind: 'bigint', value: '0x' + decodeBigIntBytes(b).toString(16).toUpperCase() + 'n' };
+    }
     if (m === this.objDescMap) return { kind: 'objdesc', obj: o };
     if (o.size === 3 && m >= 600 && o.words[1]?.t === 'raw' && (o.words[2]?.t === 'obj' || o.words[2]?.t === 'root')) return { kind: 'arrdesc', obj: o };
     if ((o.size === 8 && m >= 600 && o.words[1]?.t === 'raw') || (o.size === 9 && m === 12 && o.words[1]?.t === 'raw' && o.words[1].v === 14 && o.words[2]?.t === 'raw')) return { kind: 'classdesc', obj: o };
@@ -206,7 +210,12 @@ class Program {
       const ht = this.h.objs[o.words[p].id];
       info.names = new Array(n).fill(null);
       if (ht && ht.words) {
-        for (let k = 4; k + 1 < ht.words.length; k += 2) {
+        // Newer V8 (14.6+) uses a five-word hash-table header:
+        // map, size-in-words, element count, deleted count, capacity.
+        // Older layouts start the 2-word entries at word 4.
+        const start = (ht.words[4] && ht.words[4].t === 'raw' &&
+                       ht.words[5] && ht.words[5].t !== 'raw') ? 5 : 4;
+        for (let k = start; k + 1 < ht.words.length; k += 2) {
           const keyStr = this.str(ht.words[k]);
           const idxVal = smiv(ht.words[k + 1]);
           if (keyStr && idxVal != null && idxVal >= 0 && idxVal < n) info.names[idxVal] = keyStr;
@@ -395,4 +404,12 @@ class Program {
   }
 }
 
-module.exports = { Program, KINDS };
+// BigInt digits are stored little-endian in the words following the map and
+// length. A zero BigInt has no digit words at all.
+function decodeBigIntBytes(buf) {
+  let value = 0n;
+  for (let i = buf.length - 1; i >= 0; i--) value = (value << 8n) | BigInt(buf[i]);
+  return value;
+}
+
+module.exports = { Program, KINDS, decodeBigIntBytes };

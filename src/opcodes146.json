@@ -1,0 +1,1784 @@
+[
+ {
+  "code": 0,
+  "name": "Wide",
+  "ops": [],
+  "use": "kNone"
+ },
+ {
+  "code": 1,
+  "name": "ExtraWide",
+  "ops": [],
+  "use": "kNone"
+ },
+ {
+  "code": 2,
+  "name": "DebugBreakWide",
+  "ops": [],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 3,
+  "name": "DebugBreakExtraWide",
+  "ops": [],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 4,
+  "name": "DebugBreak0",
+  "ops": [],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 5,
+  "name": "DebugBreak1",
+  "ops": [
+   "kReg"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 6,
+  "name": "DebugBreak2",
+  "ops": [
+   "kReg",
+   "kReg"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 7,
+  "name": "DebugBreak3",
+  "ops": [
+   "kReg",
+   "kReg",
+   "kReg"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 8,
+  "name": "DebugBreak4",
+  "ops": [
+   "kReg",
+   "kReg",
+   "kReg",
+   "kReg"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 9,
+  "name": "DebugBreak5",
+  "ops": [
+   "kRuntimeId",
+   "kReg",
+   "kReg"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 10,
+  "name": "DebugBreak6",
+  "ops": [
+   "kRuntimeId",
+   "kReg",
+   "kReg",
+   "kReg"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 11,
+  "name": "Ldar",
+  "ops": [
+   "kReg"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 12,
+  "name": "LdaZero",
+  "ops": [],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 13,
+  "name": "LdaSmi",
+  "ops": [
+   "kImm"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 14,
+  "name": "LdaUndefined",
+  "ops": [],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 15,
+  "name": "LdaNull",
+  "ops": [],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 16,
+  "name": "LdaTheHole",
+  "ops": [],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 17,
+  "name": "LdaTrue",
+  "ops": [],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 18,
+  "name": "LdaFalse",
+  "ops": [],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 19,
+  "name": "LdaConstant",
+  "ops": [
+   "kConstantPoolIndex"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 20,
+  "name": "LdaContextSlotNoCell",
+  "ops": [
+   "kReg",
+   "kContextSlot",
+   "kUImm"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 21,
+  "name": "LdaContextSlot",
+  "ops": [
+   "kReg",
+   "kContextSlot",
+   "kUImm"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 22,
+  "name": "LdaImmutableContextSlot",
+  "ops": [
+   "kReg",
+   "kContextSlot",
+   "kUImm"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 23,
+  "name": "LdaCurrentContextSlotNoCell",
+  "ops": [
+   "kContextSlot"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 24,
+  "name": "LdaCurrentContextSlot",
+  "ops": [
+   "kContextSlot"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 25,
+  "name": "LdaImmutableCurrentContextSlot",
+  "ops": [
+   "kContextSlot"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 26,
+  "name": "Star",
+  "ops": [
+   "kRegOut"
+  ],
+  "use": "kReadAccumulator"
+ },
+ {
+  "code": 27,
+  "name": "Mov",
+  "ops": [
+   "kReg",
+   "kRegOut"
+  ],
+  "use": "kNone"
+ },
+ {
+  "code": 28,
+  "name": "PushContext",
+  "ops": [
+   "kRegOut"
+  ],
+  "use": "kReadAccumulator"
+ },
+ {
+  "code": 29,
+  "name": "PopContext",
+  "ops": [
+   "kReg"
+  ],
+  "use": "kNone"
+ },
+ {
+  "code": 30,
+  "name": "TestReferenceEqual",
+  "ops": [
+   "kReg"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 31,
+  "name": "TestUndetectable",
+  "ops": [],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 32,
+  "name": "TestNull",
+  "ops": [],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 33,
+  "name": "TestUndefined",
+  "ops": [],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 34,
+  "name": "TestTypeOf",
+  "ops": [
+   "kFlag8"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 35,
+  "name": "LdaGlobal",
+  "ops": [
+   "kConstantPoolIndex",
+   "kFeedbackSlot"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 36,
+  "name": "LdaGlobalInsideTypeof",
+  "ops": [
+   "kConstantPoolIndex",
+   "kFeedbackSlot"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 37,
+  "name": "StaGlobal",
+  "ops": [
+   "kConstantPoolIndex",
+   "kFeedbackSlot"
+  ],
+  "use": "kReadAndClobberAccumulator"
+ },
+ {
+  "code": 38,
+  "name": "StaContextSlotNoCell",
+  "ops": [
+   "kReg",
+   "kContextSlot",
+   "kUImm"
+  ],
+  "use": "kReadAccumulator"
+ },
+ {
+  "code": 39,
+  "name": "StaCurrentContextSlotNoCell",
+  "ops": [
+   "kContextSlot"
+  ],
+  "use": "kReadAccumulator"
+ },
+ {
+  "code": 40,
+  "name": "StaContextSlot",
+  "ops": [
+   "kReg",
+   "kContextSlot",
+   "kUImm"
+  ],
+  "use": "kReadAccumulator"
+ },
+ {
+  "code": 41,
+  "name": "StaCurrentContextSlot",
+  "ops": [
+   "kContextSlot"
+  ],
+  "use": "kReadAccumulator"
+ },
+ {
+  "code": 42,
+  "name": "LdaLookupSlot",
+  "ops": [
+   "kConstantPoolIndex"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 43,
+  "name": "LdaLookupContextSlotNoCell",
+  "ops": [
+   "kConstantPoolIndex",
+   "kContextSlot",
+   "kUImm"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 44,
+  "name": "LdaLookupContextSlot",
+  "ops": [
+   "kConstantPoolIndex",
+   "kContextSlot",
+   "kUImm"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 45,
+  "name": "LdaLookupGlobalSlot",
+  "ops": [
+   "kConstantPoolIndex",
+   "kFeedbackSlot",
+   "kUImm"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 46,
+  "name": "LdaLookupSlotInsideTypeof",
+  "ops": [
+   "kConstantPoolIndex"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 47,
+  "name": "LdaLookupContextSlotNoCellInsideTypeof",
+  "ops": [
+   "kConstantPoolIndex",
+   "kContextSlot",
+   "kUImm"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 48,
+  "name": "LdaLookupContextSlotInsideTypeof",
+  "ops": [
+   "kConstantPoolIndex",
+   "kContextSlot",
+   "kUImm"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 49,
+  "name": "LdaLookupGlobalSlotInsideTypeof",
+  "ops": [
+   "kConstantPoolIndex",
+   "kFeedbackSlot",
+   "kUImm"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 50,
+  "name": "StaLookupSlot",
+  "ops": [
+   "kConstantPoolIndex",
+   "kFlag8"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 51,
+  "name": "GetNamedProperty",
+  "ops": [
+   "kReg",
+   "kConstantPoolIndex",
+   "kFeedbackSlot"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 52,
+  "name": "GetNamedPropertyFromSuper",
+  "ops": [
+   "kReg",
+   "kConstantPoolIndex",
+   "kFeedbackSlot"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 53,
+  "name": "GetKeyedProperty",
+  "ops": [
+   "kReg",
+   "kFeedbackSlot"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 54,
+  "name": "GetEnumeratedKeyedProperty",
+  "ops": [
+   "kReg",
+   "kReg",
+   "kReg",
+   "kFeedbackSlot"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 55,
+  "name": "LdaModuleVariable",
+  "ops": [
+   "kImm",
+   "kUImm"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 56,
+  "name": "StaModuleVariable",
+  "ops": [
+   "kImm",
+   "kUImm"
+  ],
+  "use": "kReadAccumulator"
+ },
+ {
+  "code": 57,
+  "name": "SetNamedProperty",
+  "ops": [
+   "kReg",
+   "kConstantPoolIndex",
+   "kFeedbackSlot"
+  ],
+  "use": "kReadAndClobberAccumulator"
+ },
+ {
+  "code": 58,
+  "name": "DefineNamedOwnProperty",
+  "ops": [
+   "kReg",
+   "kConstantPoolIndex",
+   "kFeedbackSlot"
+  ],
+  "use": "kReadAndClobberAccumulator"
+ },
+ {
+  "code": 59,
+  "name": "SetKeyedProperty",
+  "ops": [
+   "kReg",
+   "kReg",
+   "kFeedbackSlot"
+  ],
+  "use": "kReadAndClobberAccumulator"
+ },
+ {
+  "code": 60,
+  "name": "DefineKeyedOwnProperty",
+  "ops": [
+   "kReg",
+   "kReg",
+   "kFlag8",
+   "kFeedbackSlot"
+  ],
+  "use": "kReadAndClobberAccumulator"
+ },
+ {
+  "code": 61,
+  "name": "StaInArrayLiteral",
+  "ops": [
+   "kReg",
+   "kReg",
+   "kFeedbackSlot"
+  ],
+  "use": "kReadAndClobberAccumulator"
+ },
+ {
+  "code": 62,
+  "name": "DefineKeyedOwnPropertyInLiteral",
+  "ops": [
+   "kReg",
+   "kReg",
+   "kFlag8",
+   "kFeedbackSlot"
+  ],
+  "use": "kReadAccumulator"
+ },
+ {
+  "code": 63,
+  "name": "SetPrototypeProperties",
+  "ops": [
+   "kConstantPoolIndex",
+   "kFeedbackSlot"
+  ],
+  "use": "kReadAndClobberAccumulator"
+ },
+ {
+  "code": 64,
+  "name": "Add",
+  "ops": [
+   "kReg",
+   "kFeedbackSlot"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 65,
+  "name": "Sub",
+  "ops": [
+   "kReg",
+   "kFeedbackSlot"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 66,
+  "name": "Mul",
+  "ops": [
+   "kReg",
+   "kFeedbackSlot"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 67,
+  "name": "Div",
+  "ops": [
+   "kReg",
+   "kFeedbackSlot"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 68,
+  "name": "Mod",
+  "ops": [
+   "kReg",
+   "kFeedbackSlot"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 69,
+  "name": "Exp",
+  "ops": [
+   "kReg",
+   "kFeedbackSlot"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 70,
+  "name": "BitwiseOr",
+  "ops": [
+   "kReg",
+   "kFeedbackSlot"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 71,
+  "name": "BitwiseXor",
+  "ops": [
+   "kReg",
+   "kFeedbackSlot"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 72,
+  "name": "BitwiseAnd",
+  "ops": [
+   "kReg",
+   "kFeedbackSlot"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 73,
+  "name": "ShiftLeft",
+  "ops": [
+   "kReg",
+   "kFeedbackSlot"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 74,
+  "name": "ShiftRight",
+  "ops": [
+   "kReg",
+   "kFeedbackSlot"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 75,
+  "name": "ShiftRightLogical",
+  "ops": [
+   "kReg",
+   "kFeedbackSlot"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 76,
+  "name": "Add_StringConstant_Internalize",
+  "ops": [
+   "kReg",
+   "kFeedbackSlot",
+   "kFlag8"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 77,
+  "name": "AddSmi",
+  "ops": [
+   "kImm",
+   "kFeedbackSlot"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 78,
+  "name": "SubSmi",
+  "ops": [
+   "kImm",
+   "kFeedbackSlot"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 79,
+  "name": "MulSmi",
+  "ops": [
+   "kImm",
+   "kFeedbackSlot"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 80,
+  "name": "DivSmi",
+  "ops": [
+   "kImm",
+   "kFeedbackSlot"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 81,
+  "name": "ModSmi",
+  "ops": [
+   "kImm",
+   "kFeedbackSlot"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 82,
+  "name": "ExpSmi",
+  "ops": [
+   "kImm",
+   "kFeedbackSlot"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 83,
+  "name": "BitwiseOrSmi",
+  "ops": [
+   "kImm",
+   "kFeedbackSlot"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 84,
+  "name": "BitwiseXorSmi",
+  "ops": [
+   "kImm",
+   "kFeedbackSlot"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 85,
+  "name": "BitwiseAndSmi",
+  "ops": [
+   "kImm",
+   "kFeedbackSlot"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 86,
+  "name": "ShiftLeftSmi",
+  "ops": [
+   "kImm",
+   "kFeedbackSlot"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 87,
+  "name": "ShiftRightSmi",
+  "ops": [
+   "kImm",
+   "kFeedbackSlot"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 88,
+  "name": "ShiftRightLogicalSmi",
+  "ops": [
+   "kImm",
+   "kFeedbackSlot"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 89,
+  "name": "Inc",
+  "ops": [
+   "kFeedbackSlot"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 90,
+  "name": "Dec",
+  "ops": [
+   "kFeedbackSlot"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 91,
+  "name": "Negate",
+  "ops": [
+   "kFeedbackSlot"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 92,
+  "name": "BitwiseNot",
+  "ops": [
+   "kFeedbackSlot"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 93,
+  "name": "ToBooleanLogicalNot",
+  "ops": [],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 94,
+  "name": "LogicalNot",
+  "ops": [],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 95,
+  "name": "TypeOf",
+  "ops": [
+   "kFeedbackSlot"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 96,
+  "name": "DeletePropertyStrict",
+  "ops": [
+   "kReg"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 97,
+  "name": "DeletePropertySloppy",
+  "ops": [
+   "kReg"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 98,
+  "name": "GetSuperConstructor",
+  "ops": [
+   "kRegOut"
+  ],
+  "use": "kReadAccumulator"
+ },
+ {
+  "code": 99,
+  "name": "FindNonDefaultConstructorOrConstruct",
+  "ops": [
+   "kReg",
+   "kReg",
+   "kRegOutPair"
+  ],
+  "use": "kNone"
+ },
+ {
+  "code": 100,
+  "name": "CallAnyReceiver",
+  "ops": [
+   "kReg",
+   "kRegList",
+   "kRegCount",
+   "kFeedbackSlot"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 101,
+  "name": "CallProperty",
+  "ops": [
+   "kReg",
+   "kRegList",
+   "kRegCount",
+   "kFeedbackSlot"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 102,
+  "name": "CallProperty0",
+  "ops": [
+   "kReg",
+   "kReg",
+   "kFeedbackSlot"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 103,
+  "name": "CallProperty1",
+  "ops": [
+   "kReg",
+   "kReg",
+   "kReg",
+   "kFeedbackSlot"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 104,
+  "name": "CallProperty2",
+  "ops": [
+   "kReg",
+   "kReg",
+   "kReg",
+   "kReg",
+   "kFeedbackSlot"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 105,
+  "name": "CallUndefinedReceiver",
+  "ops": [
+   "kReg",
+   "kRegList",
+   "kRegCount",
+   "kFeedbackSlot"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 106,
+  "name": "CallUndefinedReceiver0",
+  "ops": [
+   "kReg",
+   "kFeedbackSlot"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 107,
+  "name": "CallUndefinedReceiver1",
+  "ops": [
+   "kReg",
+   "kReg",
+   "kFeedbackSlot"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 108,
+  "name": "CallUndefinedReceiver2",
+  "ops": [
+   "kReg",
+   "kReg",
+   "kReg",
+   "kFeedbackSlot"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 109,
+  "name": "CallWithSpread",
+  "ops": [
+   "kReg",
+   "kRegList",
+   "kRegCount",
+   "kFeedbackSlot"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 110,
+  "name": "CallRuntime",
+  "ops": [
+   "kRuntimeId",
+   "kRegList",
+   "kRegCount"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 111,
+  "name": "CallRuntimeForPair",
+  "ops": [
+   "kRuntimeId",
+   "kRegList",
+   "kRegCount",
+   "kRegOutPair"
+  ],
+  "use": "kClobberAccumulator"
+ },
+ {
+  "code": 112,
+  "name": "CallJSRuntime",
+  "ops": [
+   "kNativeContextIndex",
+   "kRegList",
+   "kRegCount"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 113,
+  "name": "InvokeIntrinsic",
+  "ops": [
+   "kIntrinsicId",
+   "kRegList",
+   "kRegCount"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 114,
+  "name": "Construct",
+  "ops": [
+   "kReg",
+   "kRegList",
+   "kRegCount",
+   "kFeedbackSlot"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 115,
+  "name": "ConstructWithSpread",
+  "ops": [
+   "kReg",
+   "kRegList",
+   "kRegCount",
+   "kFeedbackSlot"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 116,
+  "name": "ConstructForwardAllArgs",
+  "ops": [
+   "kReg",
+   "kFeedbackSlot"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 117,
+  "name": "TestEqual",
+  "ops": [
+   "kReg",
+   "kEmbeddedFeedback"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 118,
+  "name": "TestEqualStrict",
+  "ops": [
+   "kReg",
+   "kEmbeddedFeedback"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 119,
+  "name": "TestLessThan",
+  "ops": [
+   "kReg",
+   "kEmbeddedFeedback"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 120,
+  "name": "TestGreaterThan",
+  "ops": [
+   "kReg",
+   "kEmbeddedFeedback"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 121,
+  "name": "TestLessThanOrEqual",
+  "ops": [
+   "kReg",
+   "kEmbeddedFeedback"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 122,
+  "name": "TestGreaterThanOrEqual",
+  "ops": [
+   "kReg",
+   "kEmbeddedFeedback"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 123,
+  "name": "TestInstanceOf",
+  "ops": [
+   "kReg",
+   "kFeedbackSlot"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 124,
+  "name": "TestIn",
+  "ops": [
+   "kReg",
+   "kFeedbackSlot"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 125,
+  "name": "ToName",
+  "ops": [],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 126,
+  "name": "ToNumber",
+  "ops": [
+   "kFeedbackSlot"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 127,
+  "name": "ToNumeric",
+  "ops": [
+   "kFeedbackSlot"
+  ],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 128,
+  "name": "ToObject",
+  "ops": [
+   "kRegOut"
+  ],
+  "use": "kReadAccumulator"
+ },
+ {
+  "code": 129,
+  "name": "ToString",
+  "ops": [],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 130,
+  "name": "ToBoolean",
+  "ops": [],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 131,
+  "name": "CreateRegExpLiteral",
+  "ops": [
+   "kConstantPoolIndex",
+   "kFeedbackSlot",
+   "kFlag16"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 132,
+  "name": "CreateArrayLiteral",
+  "ops": [
+   "kConstantPoolIndex",
+   "kFeedbackSlot",
+   "kFlag8"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 133,
+  "name": "CreateArrayFromIterable",
+  "ops": [],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 134,
+  "name": "CreateEmptyArrayLiteral",
+  "ops": [
+   "kFeedbackSlot"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 135,
+  "name": "CreateObjectLiteral",
+  "ops": [
+   "kConstantPoolIndex",
+   "kFeedbackSlot",
+   "kFlag8"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 136,
+  "name": "CreateEmptyObjectLiteral",
+  "ops": [],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 137,
+  "name": "CloneObject",
+  "ops": [
+   "kReg",
+   "kFlag8",
+   "kFeedbackSlot"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 138,
+  "name": "GetTemplateObject",
+  "ops": [
+   "kConstantPoolIndex",
+   "kFeedbackSlot"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 139,
+  "name": "CreateClosure",
+  "ops": [
+   "kConstantPoolIndex",
+   "kFeedbackSlot",
+   "kFlag8"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 140,
+  "name": "CreateBlockContext",
+  "ops": [
+   "kConstantPoolIndex"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 141,
+  "name": "CreateCatchContext",
+  "ops": [
+   "kReg",
+   "kConstantPoolIndex"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 142,
+  "name": "CreateFunctionContext",
+  "ops": [
+   "kConstantPoolIndex",
+   "kUImm"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 143,
+  "name": "CreateFunctionContextWithCells",
+  "ops": [
+   "kConstantPoolIndex",
+   "kUImm"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 144,
+  "name": "CreateEvalContext",
+  "ops": [
+   "kConstantPoolIndex",
+   "kUImm"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 145,
+  "name": "CreateWithContext",
+  "ops": [
+   "kReg",
+   "kConstantPoolIndex"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 146,
+  "name": "CreateMappedArguments",
+  "ops": [],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 147,
+  "name": "CreateUnmappedArguments",
+  "ops": [],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 148,
+  "name": "CreateRestParameter",
+  "ops": [],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 149,
+  "name": "JumpLoop",
+  "ops": [
+   "kUImm",
+   "kImm",
+   "kFeedbackSlot"
+  ],
+  "use": "kClobberAccumulator"
+ },
+ {
+  "code": 150,
+  "name": "Jump",
+  "ops": [
+   "kUImm"
+  ],
+  "use": "kNone"
+ },
+ {
+  "code": 151,
+  "name": "JumpConstant",
+  "ops": [
+   "kConstantPoolIndex"
+  ],
+  "use": "kNone"
+ },
+ {
+  "code": 152,
+  "name": "JumpIfNullConstant",
+  "ops": [
+   "kConstantPoolIndex"
+  ],
+  "use": "kReadAccumulator"
+ },
+ {
+  "code": 153,
+  "name": "JumpIfNotNullConstant",
+  "ops": [
+   "kConstantPoolIndex"
+  ],
+  "use": "kReadAccumulator"
+ },
+ {
+  "code": 154,
+  "name": "JumpIfUndefinedConstant",
+  "ops": [
+   "kConstantPoolIndex"
+  ],
+  "use": "kReadAccumulator"
+ },
+ {
+  "code": 155,
+  "name": "JumpIfNotUndefinedConstant",
+  "ops": [
+   "kConstantPoolIndex"
+  ],
+  "use": "kReadAccumulator"
+ },
+ {
+  "code": 156,
+  "name": "JumpIfUndefinedOrNullConstant",
+  "ops": [
+   "kConstantPoolIndex"
+  ],
+  "use": "kReadAccumulator"
+ },
+ {
+  "code": 157,
+  "name": "JumpIfTrueConstant",
+  "ops": [
+   "kConstantPoolIndex"
+  ],
+  "use": "kReadAccumulator"
+ },
+ {
+  "code": 158,
+  "name": "JumpIfFalseConstant",
+  "ops": [
+   "kConstantPoolIndex"
+  ],
+  "use": "kReadAccumulator"
+ },
+ {
+  "code": 159,
+  "name": "JumpIfJSReceiverConstant",
+  "ops": [
+   "kConstantPoolIndex"
+  ],
+  "use": "kReadAccumulator"
+ },
+ {
+  "code": 160,
+  "name": "JumpIfForInDoneConstant",
+  "ops": [
+   "kConstantPoolIndex",
+   "kReg",
+   "kReg"
+  ],
+  "use": "kNone"
+ },
+ {
+  "code": 161,
+  "name": "JumpIfToBooleanTrueConstant",
+  "ops": [
+   "kConstantPoolIndex"
+  ],
+  "use": "kReadAccumulator"
+ },
+ {
+  "code": 162,
+  "name": "JumpIfToBooleanFalseConstant",
+  "ops": [
+   "kConstantPoolIndex"
+  ],
+  "use": "kReadAccumulator"
+ },
+ {
+  "code": 163,
+  "name": "JumpIfToBooleanTrue",
+  "ops": [
+   "kUImm"
+  ],
+  "use": "kReadAccumulator"
+ },
+ {
+  "code": 164,
+  "name": "JumpIfToBooleanFalse",
+  "ops": [
+   "kUImm"
+  ],
+  "use": "kReadAccumulator"
+ },
+ {
+  "code": 165,
+  "name": "JumpIfTrue",
+  "ops": [
+   "kUImm"
+  ],
+  "use": "kReadAccumulator"
+ },
+ {
+  "code": 166,
+  "name": "JumpIfFalse",
+  "ops": [
+   "kUImm"
+  ],
+  "use": "kReadAccumulator"
+ },
+ {
+  "code": 167,
+  "name": "JumpIfNull",
+  "ops": [
+   "kUImm"
+  ],
+  "use": "kReadAccumulator"
+ },
+ {
+  "code": 168,
+  "name": "JumpIfNotNull",
+  "ops": [
+   "kUImm"
+  ],
+  "use": "kReadAccumulator"
+ },
+ {
+  "code": 169,
+  "name": "JumpIfUndefined",
+  "ops": [
+   "kUImm"
+  ],
+  "use": "kReadAccumulator"
+ },
+ {
+  "code": 170,
+  "name": "JumpIfNotUndefined",
+  "ops": [
+   "kUImm"
+  ],
+  "use": "kReadAccumulator"
+ },
+ {
+  "code": 171,
+  "name": "JumpIfUndefinedOrNull",
+  "ops": [
+   "kUImm"
+  ],
+  "use": "kReadAccumulator"
+ },
+ {
+  "code": 172,
+  "name": "JumpIfJSReceiver",
+  "ops": [
+   "kUImm"
+  ],
+  "use": "kReadAccumulator"
+ },
+ {
+  "code": 173,
+  "name": "JumpIfForInDone",
+  "ops": [
+   "kUImm",
+   "kReg",
+   "kReg"
+  ],
+  "use": "kNone"
+ },
+ {
+  "code": 174,
+  "name": "SwitchOnSmiNoFeedback",
+  "ops": [
+   "kConstantPoolIndex",
+   "kUImm",
+   "kImm"
+  ],
+  "use": "kReadAccumulator"
+ },
+ {
+  "code": 175,
+  "name": "ForInEnumerate",
+  "ops": [
+   "kReg"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 176,
+  "name": "ForInPrepare",
+  "ops": [
+   "kRegOutTriple",
+   "kFeedbackSlot"
+  ],
+  "use": "kReadAndClobberAccumulator"
+ },
+ {
+  "code": 177,
+  "name": "ForInNext",
+  "ops": [
+   "kReg",
+   "kReg",
+   "kRegPair",
+   "kFeedbackSlot"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 178,
+  "name": "ForInStep",
+  "ops": [
+   "kRegInOut"
+  ],
+  "use": "kNone"
+ },
+ {
+  "code": 179,
+  "name": "ForOfNext",
+  "ops": [
+   "kReg",
+   "kReg",
+   "kRegOutPair",
+   "kFeedbackSlot"
+  ],
+  "use": "kClobberAccumulator"
+ },
+ {
+  "code": 180,
+  "name": "SetPendingMessage",
+  "ops": [],
+  "use": "kReadWriteAccumulator"
+ },
+ {
+  "code": 181,
+  "name": "Throw",
+  "ops": [],
+  "use": "kReadAccumulator"
+ },
+ {
+  "code": 182,
+  "name": "ReThrow",
+  "ops": [],
+  "use": "kReadAccumulator"
+ },
+ {
+  "code": 183,
+  "name": "Return",
+  "ops": [],
+  "use": "kReadAccumulator"
+ },
+ {
+  "code": 184,
+  "name": "ThrowReferenceErrorIfHole",
+  "ops": [
+   "kConstantPoolIndex"
+  ],
+  "use": "kReadAccumulator"
+ },
+ {
+  "code": 185,
+  "name": "ThrowSuperNotCalledIfHole",
+  "ops": [],
+  "use": "kReadAccumulator"
+ },
+ {
+  "code": 186,
+  "name": "ThrowSuperAlreadyCalledIfNotHole",
+  "ops": [],
+  "use": "kReadAccumulator"
+ },
+ {
+  "code": 187,
+  "name": "ThrowIfNotSuperConstructor",
+  "ops": [
+   "kReg"
+  ],
+  "use": "kNone"
+ },
+ {
+  "code": 188,
+  "name": "SwitchOnGeneratorState",
+  "ops": [
+   "kReg",
+   "kConstantPoolIndex",
+   "kUImm"
+  ],
+  "use": "kNone"
+ },
+ {
+  "code": 189,
+  "name": "SuspendGenerator",
+  "ops": [
+   "kReg",
+   "kRegList",
+   "kRegCount",
+   "kUImm"
+  ],
+  "use": "kReadAccumulator"
+ },
+ {
+  "code": 190,
+  "name": "ResumeGenerator",
+  "ops": [
+   "kReg",
+   "kRegOutList",
+   "kRegCount"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 191,
+  "name": "GetIterator",
+  "ops": [
+   "kReg",
+   "kFeedbackSlot",
+   "kFeedbackSlot"
+  ],
+  "use": "kWriteAccumulator"
+ },
+ {
+  "code": 192,
+  "name": "Debugger",
+  "ops": [],
+  "use": "kClobberAccumulator"
+ },
+ {
+  "code": 193,
+  "name": "IncBlockCounter",
+  "ops": [
+   "kCoverageSlot"
+  ],
+  "use": "kNone"
+ },
+ {
+  "code": 194,
+  "name": "Abort",
+  "ops": [
+   "kAbortReason"
+  ],
+  "use": "kNone"
+ },
+ {
+  "code": 195,
+  "name": "Star15",
+  "ops": [],
+  "use": "kReadAccumulatorWriteShortStar"
+ },
+ {
+  "code": 196,
+  "name": "Star14",
+  "ops": [],
+  "use": "kReadAccumulatorWriteShortStar"
+ },
+ {
+  "code": 197,
+  "name": "Star13",
+  "ops": [],
+  "use": "kReadAccumulatorWriteShortStar"
+ },
+ {
+  "code": 198,
+  "name": "Star12",
+  "ops": [],
+  "use": "kReadAccumulatorWriteShortStar"
+ },
+ {
+  "code": 199,
+  "name": "Star11",
+  "ops": [],
+  "use": "kReadAccumulatorWriteShortStar"
+ },
+ {
+  "code": 200,
+  "name": "Star10",
+  "ops": [],
+  "use": "kReadAccumulatorWriteShortStar"
+ },
+ {
+  "code": 201,
+  "name": "Star9",
+  "ops": [],
+  "use": "kReadAccumulatorWriteShortStar"
+ },
+ {
+  "code": 202,
+  "name": "Star8",
+  "ops": [],
+  "use": "kReadAccumulatorWriteShortStar"
+ },
+ {
+  "code": 203,
+  "name": "Star7",
+  "ops": [],
+  "use": "kReadAccumulatorWriteShortStar"
+ },
+ {
+  "code": 204,
+  "name": "Star6",
+  "ops": [],
+  "use": "kReadAccumulatorWriteShortStar"
+ },
+ {
+  "code": 205,
+  "name": "Star5",
+  "ops": [],
+  "use": "kReadAccumulatorWriteShortStar"
+ },
+ {
+  "code": 206,
+  "name": "Star4",
+  "ops": [],
+  "use": "kReadAccumulatorWriteShortStar"
+ },
+ {
+  "code": 207,
+  "name": "Star3",
+  "ops": [],
+  "use": "kReadAccumulatorWriteShortStar"
+ },
+ {
+  "code": 208,
+  "name": "Star2",
+  "ops": [],
+  "use": "kReadAccumulatorWriteShortStar"
+ },
+ {
+  "code": 209,
+  "name": "Star1",
+  "ops": [],
+  "use": "kReadAccumulatorWriteShortStar"
+ },
+ {
+  "code": 210,
+  "name": "Star0",
+  "ops": [],
+  "use": "kReadAccumulatorWriteShortStar"
+ },
+ {
+  "code": 211,
+  "name": "Illegal",
+  "ops": [],
+  "use": "kNone"
+ }
+]

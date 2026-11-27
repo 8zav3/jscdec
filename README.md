@@ -31,14 +31,14 @@ Drop a `.jsc` snapshot, an Electron `.asar` archive, or a packaged Electron `.ex
 
 ## Overview
 
-- **Multi-Version V8 Snapshot Deserializer**: Supports both 4-byte pointer-compressed heaps (`Electron 22–39` / `V8 10.8–14.2`) and 8-byte uncompressed x64 heaps (`Node.js 20–22`) out of the box using pre-built `RO_SPACE` and `Root` tables.
+- **Multi-Version V8 Snapshot Deserializer**: Supports both 4-byte pointer-compressed heaps (`Electron 22–39` / `V8 10.8–14.2`) and 8-byte uncompressed x64 heaps (`Node.js 20–26`) out of the box using pre-built `RO_SPACE` and `Root` tables.
 - **CFG & AST Reconstruction**: Lifts classes (`extends`/`super`, getters/setters, static fields), `async`/`await`, generators, `try`/`catch`/`finally`, loops (`for`, `for...of`, `for...in`, `while`), `switch`, destructuring, and template literals.
 - **Dataflow Identifier Recovery & Deobfuscation**: Restores closure names from `ScopeInfo` (inline arrays & `NameToIndexHashTable`), infers stack register names through forward/backward def-use analysis, and statically resolves rotated `_0x` string-array obfuscators.
 - **In-Browser `.asar` & `.exe` Unpacker**: Extracts `resources/app.asar` from NSIS / 7-Zip packaged Electron executables via WebAssembly and decompiles all embedded `.jsc` files in one pass.
 
 ## Documentation
 
-- **[Supported Versions (`doc/versions.md`)](doc/versions.md)** — Full V8, Electron 22–34, and Node.js 20–22 compatibility matrix and snapshot layout details.
+- **[Supported Versions (`doc/versions.md`)](doc/versions.md)** — Full V8, Electron 22–34, and Node.js 20–26 compatibility matrix and snapshot layout details.
 - **[Example Output (`doc/example.md`)](doc/example.md)** — Sample decompiled output and breakdown of AST, control-flow, and identifier recovery passes.
 
 ## Installation & Usage

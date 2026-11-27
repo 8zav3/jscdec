@@ -38,6 +38,17 @@ test('Node.js 20.20.2 Bytenode-style .jsc files decompile cleanly', () => {
   assert.match(classesOut, /async verify\(/);
 });
 
+test('V8 14.6 / Node 26 context names, BigInts, and opcodes', () => {
+  const out = decompileFile(path.join(ROOT, 'test-jsc', '01-context-names.node26.jsc'));
+  assert.match(out, /Detected: V8 14\.6/);
+  assert.match(out, /function inner\(/);
+  assert.match(out, /\balpha\b/);
+  assert.match(out, /\btau\b/);
+  assert.match(out, /\bupsilon\b/);
+  assert.match(out, /0x0n/);
+  assert.match(out, /0x123456789abcdef0123456789n/i);
+});
+
 test('All .jsc files in test-jsc/ decompile without error', () => {
   const files = fs.readdirSync(path.join(ROOT, 'test-jsc')).filter(f => f.endsWith('.jsc'));
   assert.ok(files.length >= 36);
