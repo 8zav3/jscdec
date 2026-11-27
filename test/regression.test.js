@@ -10,6 +10,8 @@ const { spawnSync } = require('node:child_process');
 const ROOT = path.resolve(__dirname, '..');
 const CLI = path.join(ROOT, 'bin', 'jscdec.js');
 const { decompileFile } = require('../src/index');
+const post = require('../src/post');
+const { E, stmt } = require('../src/ast');
 const { Heap } = require('../src/heap');
 const oracle = require('../src/oracle');
 
@@ -36,6 +38,75 @@ test('Node.js 20.20.2 Bytenode-style .jsc files decompile cleanly', () => {
   assert.match(classesOut, /class BaseService/);
   assert.match(classesOut, /class AuthService extends BaseService/);
   assert.match(classesOut, /async verify\(/);
+});
+
+test('Temps declared in one branch and used in a sibling are hoisted', () => {
+  const body = [{
+    t: 'if',
+    c: E.id('flag'),
+    a: [
+      { t: 'var', kind: 'let', name: '$t0', e: E.lit(1) },
+      { t: 'expr', e: E.assign(E.id('$t0'), E.lit(2)) },
+    ],
+    b: [{ t: 'expr', e: E.assign(E.id('$t0'), E.lit(3)) }],
+  }];
+  post.hoistSiblingTemps(body);
+  const out = body.map(s => stmt(s, '')).join('\n');
+  assert.match(out, /^let \$t0;$/m);
+  assert.doesNotMatch(out, /let \$t0 = 1/);
+  assert.match(out, /\$t0 = 1;/);
+  assert.match(out, /\$t0 = 3;/);
+});
+
+test('Declarations used only by a for init are not dropped', () => {
+  const info = {
+    name: 'f',
+    kind: 'Normal',
+    params: [],
+    body: [
+      { t: 'var', kind: 'const', name: '$t0', e: E.lit(5) },
+      { t: 'for', init: 'let i = $t0', c: E.lit(true), update: 'i++', body: [] },
+    ],
+  };
+  post.process(info, {});
+  const out = info.body.map(s => stmt(s, '')).join('\n');
+  // countIds/usesName used to ignore the for init string, so inlineBlock
+  // treated $t0 as dead and removed its declaration.
+  assert.match(out, /const \$t0 = 5;/);
+  assert.match(out, /let i = \$t0/);
+});
+
+test('Synthetic for-of iterator close is collapsed to iter.return()', () => {
+  const ret = E.member(E.id('$it'), 'return');
+  const call = E.call(ret, []);
+  const closeIf = {
+    t: 'if',
+    c: E.logic('&&', E.bin('!=', ret, E.lit(null)), E.bin('!==', E.un('typeof', call), E.lit('object'))),
+    a: [{ t: 'expr', e: E.call(E.id('%Runtime168'), [call]) }],
+    b: null,
+  };
+  const syntheticTry = {
+    t: 'try',
+    body: [closeIf],
+    catchBody: [{
+      t: 'if',
+      c: E.bin('!==', E.id('undefined'), E.lit(0)),
+      a: [{ t: 'throw', e: E.id('$exc') }],
+      b: null,
+    }],
+    param: null,
+  };
+  const body = [{
+    t: 'try',
+    body: [],
+    finallyBody: [{ t: 'if', c: E.un('!', E.lit(false)), a: [syntheticTry], b: null }],
+  }];
+  post.simplifyIteratorClose(body);
+  const out = body.map(s => stmt(s, '')).join('\n');
+  assert.match(out, /\$it\.return != null/);
+  assert.match(out, /const \$closeResult = \$it\.return\(\);/);
+  assert.match(out, /%Runtime168\(\$closeResult\)/);
+  assert.doesNotMatch(out, /\$exc|undefined !== 0|!false/);
 });
 
 test('All .jsc files in test-jsc/ decompile without error', () => {

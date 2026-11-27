@@ -226,6 +226,10 @@ P.doCond = function (ins, i, end, st, out, loop, ifctx) {
   if (st.acc && st.acc.forinKey && loop && !loop.forin) loop.forin = { key: st.acc.forinKey, obj: st.acc.forinObj };
 
   const Jexpr = this.jumpExpr(ins, st);
+  // The jump leaves the accumulator intact. Remember a side-effect-free tested
+  // value so a branch that starts with `Star` can store the real expression
+  // instead of `undefined`.
+  const tested = st.acc && st.acc.e && !hasEffect(st.acc.e) ? st.acc.e : null;
   const cont = neg(Jexpr);
   { const cf = this.constCond(cont); if (cf === true) return i + 1; if (cf === false) return this.idxAt(t); }
 
@@ -269,10 +273,12 @@ P.doCond = function (ins, i, end, st, out, loop, ifctx) {
   }
 
   this.commit(st, out);
+  if (tested) st.acc = { e: tested, used: true };
   {
     const ch = this.chainCond(ins, i, Jexpr, st, loop);
     if (ch) {
       st.regs = new Map(ch.regs);
+      if (tested) st.acc = { e: tested, used: true };
       return this.buildIf(ch.cond, ch.B, ch.E, st, out, loop, ch.resume, false, end);
     }
   }
@@ -293,10 +299,12 @@ function substId(e, name, repl) {
 }
 P.chainCond = function (ins, i, J1, st, loop) {
   const chain = [{ T: this.jt(ins), J: J1, idx: i, regs: st.regs }];
-  let scratch = this.clone(st); scratch.acc = null;
+  // A conditional jump keeps the accumulator, so the code between chained
+  // tests still sees the previous tested value.
+  let scratch = this.clone(st); scratch.acc = st.acc;
   let cur = i;
   while (chain.length < 8) {
-    const s2 = this.clone(scratch); s2.acc = null; const tmp = [];
+    const s2 = this.clone(scratch); s2.acc = scratch.acc; const tmp = [];
     let k = cur + 1, found = null;
     while (k < this.insns.length && k - cur < 40) {
       const x = this.insns[k];
@@ -366,15 +374,21 @@ P.buildIf = function (cond, thenStartOrIdx, t, st, out, loop, resumeIdx, merged,
   const hasElse = elseEnd !== null && elseEnd > t && !this.isLoopTarget(elseEnd, loop) && !isFin && !pastEnd && lastIdx >= this.at.get(thenStart);
   const thenEnd = hasElse ? last.off : t;
   const ifctx = { target: t, start: 0, cond };
+  // A conditional jump does not clobber the accumulator. If the branch starts
+  // with `Star r`, it stores the value that was just tested (`jumpExpr` only
+  // consumed a copy). Carry a side-effect-free accumulator into both branches
+  // so that store keeps the real value instead of `undefined`.
+  const carry = st.acc && st.acc.e && !hasEffect(st.acc.e) ? st.acc.e : null;
+  const branchAcc = carry ? { e: carry, used: true } : null;
   const stT = this.clone(st); const oT = [];
-  stT.acc = null;
+  stT.acc = branchAcc;
   this.flush(st, out);
   this.walk(thenStart, thenEnd, stT, oT, loop, ifctx);
   this.flush(stT, oT);
   let stE = null, oE = [];
   const insertAt = out.length;
   if (hasElse) {
-    stE = this.clone(st); stE.acc = null;
+    stE = this.clone(st); stE.acc = branchAcc;
     this.walk(t, elseEnd, stE, oE, loop);
     this.flush(stE, oE);
   }
