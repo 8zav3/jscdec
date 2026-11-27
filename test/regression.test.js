@@ -58,6 +58,24 @@ test('Temps declared in one branch and used in a sibling are hoisted', () => {
   assert.match(out, /\$t0 = 3;/);
 });
 
+test('Declarations used only by a for init are not dropped', () => {
+  const info = {
+    name: 'f',
+    kind: 'Normal',
+    params: [],
+    body: [
+      { t: 'var', kind: 'const', name: '$t0', e: E.lit(5) },
+      { t: 'for', init: 'let i = $t0', c: E.lit(true), update: 'i++', body: [] },
+    ],
+  };
+  post.process(info, {});
+  const out = info.body.map(s => stmt(s, '')).join('\n');
+  // countIds/usesName used to ignore the for init string, so inlineBlock
+  // treated $t0 as dead and removed its declaration.
+  assert.match(out, /const \$t0 = 5;/);
+  assert.match(out, /let i = \$t0/);
+});
+
 test('Synthetic for-of iterator close is collapsed to iter.return()', () => {
   const ret = E.member(E.id('$it'), 'return');
   const call = E.call(ret, []);
