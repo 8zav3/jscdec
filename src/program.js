@@ -152,6 +152,8 @@ class Program {
         const refId = w.t === 'ro' ? `ro_${w.chunk}_${w.off}` : `root_${w.idx}`;
         const r = this.refs.get(w.t === 'ro' ? `ro:${w.chunk}:${w.off}` : `root:${w.idx}`) || { type: 'unknown' };
         if (r.type === 'string') return { kind: 'str', value: r.value };
+        if (r.type === 'empty_object_boilerplate') return { kind: 'emptyobj' };
+        if (r.type === 'empty_array_boilerplate') return { kind: 'emptyarr' };
         if (r.type === 'undefined') return { kind: 'undef' };
         if (r.type === 'null') return { kind: 'null' };
         if (r.type === 'true') return { kind: 'true' };
