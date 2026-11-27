@@ -5,7 +5,7 @@ const EFFECT = new Set(['call', 'new', 'assign', 'await', 'yield']);
 const isTemp = (n) => typeof n === 'string' && n[0] === '$';
 const isParam = (n) => typeof n === 'string' && /^[ab]\d+$/.test(n);
 const isObfName = (n) => typeof n === 'string' && /^_0x[0-9a-f]+$/i.test(n);
-const RESERVED = new Set('break case catch class const continue debugger default delete do else enum export extends false finally for function if import in instanceof new null return super switch this throw true try typeof var void while with yield let static await arguments undefined NaN Infinity'.split(' '));
+const RESERVED = new Set('break case catch class const continue debugger default delete do else enum export extends false finally for function if import in instanceof new null return super switch this throw true try typeof var void while with yield let static await arguments undefined NaN Infinity implements interface package private protected public'.split(' '));
 
 function kids(e) {
   switch (e.k) {
@@ -199,9 +199,9 @@ function foldOptionalChaining(body) {
     if (expr.k === 'member' && same(expr.obj, target)) return { ...expr, opt: true };
     if (expr.k === 'index' && same(expr.obj, target)) return { ...expr, opt: true };
     if (expr.k === 'call' && same(expr.fn, target)) return { ...expr, opt: true };
-    if (expr.k === 'member') { const sub = attachOpt(expr.obj, target); if (sub !== expr.obj) return { ...expr, obj: sub }; }
-    if (expr.k === 'index') { const sub = attachOpt(expr.obj, target); if (sub !== expr.obj) return { ...expr, obj: sub }; }
-    if (expr.k === 'call') { const sub = attachOpt(expr.fn, target); if (sub !== expr.fn) return { ...expr, fn: sub }; }
+    if (expr.k === 'member') { const sub = attachOpt(expr.obj, target); if (sub && sub !== expr.obj) return { ...expr, obj: sub }; }
+    if (expr.k === 'index') { const sub = attachOpt(expr.obj, target); if (sub && sub !== expr.obj) return { ...expr, obj: sub }; }
+    if (expr.k === 'call') { const sub = attachOpt(expr.fn, target); if (sub && sub !== expr.fn) return { ...expr, fn: sub }; }
     return null;
   };
   eachExprDeep(body, (o, k) => {
@@ -344,7 +344,7 @@ function foldObjectDestruct(list, counts, writes) {
       }
       if (props.length >= 2 && (counts.get(s.name) || 0) === props.length) {
         for (const p of props) {
-          if (isTemp(p.target) && !props.some(o => o !== p && o.target === p.prop)) {
+          if (isTemp(p.target) && !props.some(o => o !== p && o.target === p.prop) && !(counts && counts.get(p.prop) > 0)) {
             for (let k = j; k < list.length; k++) {
               for (const [o, key] of stmtExprs(list[k])) o[key] = replaceId(o[key], p.target, E.id(p.prop));
               for (const b of childBlocks(list[k])) eachExprDeep(b, (o, key) => { o[key] = replaceId(o[key], p.target, E.id(p.prop)); });
@@ -372,13 +372,14 @@ function foldObjectDestruct(list, counts, writes) {
       }
       if (props.length >= 2) {
         for (const p of props) {
+          if (counts && counts.get(p.prop) > 0) continue;
           for (let k = j; k < list.length; k++) {
             for (const [o, key] of stmtExprs(list[k])) o[key] = replaceId(o[key], p.target, E.id(p.prop));
             for (const b of childBlocks(list[k])) eachExprDeep(b, (o, key) => { o[key] = replaceId(o[key], p.target, E.id(p.prop)); });
           }
           p.target = p.prop;
         }
-        const fields = props.map(p => p.prop).join(', ');
+        const fields = props.map(p => p.prop === p.target ? p.prop : `${p.prop}: ${p.target}`).join(', ');
         list.splice(i, props.length, { t: 'var', kind: props[0].kind || 'const', name: `{ ${fields} }`, e: E.id(paramName), pos: s.pos });
       }
     }
@@ -1146,6 +1147,8 @@ function rename(info, usedOuter = new Set(), outerObfMap = new Map()) {
         const splitHints = s.destruct.length === 3 ? ['part1', 'part2', 'part3'] : ['part1', 'part2', 'part3', 'part4'];
         s.destruct = s.destruct.map((n, idx) => (isTemp(n) || isObfName(n)) ? allocName(n, isSplit ? splitHints[idx] : (idx === 0 ? 'k' : 'v')) : n);
         s.name = '[' + s.destruct.join(', ') + ']';
+      } else if (s.t === 'var' && typeof s.name === 'string' && /[{}:]/.test(s.name) && s.name.includes('$')) {
+        s.name = s.name.replace(/\$[A-Za-z_$][\w$]*/g, (t) => allocName(t));
       } else if (s.t === 'var' && (isTemp(s.name) || isObfName(s.name))) {
         let hint = propHints.get(s.name) || inferExprName(s.e, map) || assignHints.get(s.name) || sinkHints.get(s.name);
         if (!hint && counterVars.has(s.name)) hint = 'count';
@@ -1586,6 +1589,166 @@ function deobfuscate0x(info) {
   return true;
 }
 
+function dropPureExpressions(list) {
+  for (const s of list) if (s.t !== 'fndecl') for (const b of childBlocks(s)) dropPureExpressions(b);
+  for (let i = list.length - 1; i >= 0; i--) {
+    const s = list[i];
+    if (s.t !== 'expr') continue;
+    if (s.e.k === 'lit' && typeof s.e.v === 'string') continue; // directive
+    if (!hasEff(s.e)) list.splice(i, 1);
+  }
+}
+
+// A `for (const item of map)` loop whose item is array-destructured and whose
+// value is then object-destructured can lose the second destructuring when the
+// value register is merged away. Detect the pattern and recover
+// `const { a, b } = value` plus `value.<extraProp>[a]` uses.
+function recoverMapDestructuring(body) {
+  for (const s of body) if (s.t !== 'fndecl') for (const b of childBlocks(s)) recoverMapDestructuring(b);
+  for (const s of body) {
+    if (s.t !== 'forin' || !s.of || !s.e || s.e.k !== 'id') continue;
+    const loopName = s.name;
+    const mapName = s.e.name;
+    const names = new Set();
+    for (const st of s.body) if (st.t === 'decl') for (const n of st.names) names.add(n);
+    if (!names.size) continue;
+    const arrIdx = s.body.findIndex(st => st.t === 'var' && Array.isArray(st.destruct) && st.e && st.e.k === 'id' && st.e.name === loopName);
+    if (arrIdx < 0 || s.body[arrIdx].destruct.length < 2) continue;
+    const valueName = s.body[arrIdx].destruct[1];
+    const uses = new Set();
+    const scanUses = (list) => {
+      for (const st of list) {
+        for (const [o, k] of stmtExprs(st)) walkNoFn(o[k], n => {
+          if (n.k === 'index' && n.obj.k === 'undef' && n.key.k === 'id' && names.has(n.key.name)) uses.add(n.key.name);
+        });
+        if (st.t !== 'fndecl') for (const b of childBlocks(st)) scanUses(b);
+      }
+    };
+    scanUses(s.body);
+    if (!uses.size || [...names].some(n => !uses.has(n))) continue;
+    const props = new Map();
+    const findSet = (list) => {
+      for (const st of list) {
+        for (const [o, k] of stmtExprs(st)) walkNoFn(o[k], n => {
+          if (n.k === 'call' && n.fn.k === 'member' && n.fn.prop === 'set' &&
+              n.fn.obj.k === 'id' && n.fn.obj.name === mapName && n.args[1] && n.args[1].k === 'obj') {
+            for (const p of n.args[1].props) if (typeof p.key === 'string') props.set(p.key, (props.get(p.key) || 0) + 1);
+          }
+        });
+        if (st.t !== 'fndecl') for (const b of childBlocks(st)) findSet(b);
+      }
+    };
+    findSet(body);
+    const extra = [...props.keys()].filter(k => !names.has(k));
+    if (extra.length !== 1) continue;
+    const extraProp = extra[0];
+    s.body = s.body.filter(st => st.t !== 'decl');
+    const di = s.body.findIndex(st => st.t === 'var' && Array.isArray(st.destruct) && st.e && st.e.k === 'id' && st.e.name === loopName);
+    if (di < 0) continue;
+    s.body.splice(di + 1, 0, { t: 'var', kind: 'const', name: `{ ${[...uses].join(', ')} }`, e: E.id(valueName) });
+    const replace = (list) => {
+      for (const st of list) {
+        for (const [o, k] of stmtExprs(st)) o[k] = mapExpr(o[k], n => {
+          if (n.k === 'index' && n.obj.k === 'undef' && n.key.k === 'id' && uses.has(n.key.name)) {
+            return E.index(E.member(E.id(valueName), extraProp), n.key);
+          }
+          return null;
+        });
+        if (st.t !== 'fndecl') for (const b of childBlocks(st)) replace(b);
+      }
+    };
+    replace(s.body);
+  }
+}
+
+// Generator methods lower `yield value` to InvokeIntrinsic 14
+// (CreateIterResultObject) plus a Suspend/Resume state machine. Rebuild the
+// source-level `yield` and drop the synthetic prologue/dispatch artifacts.
+function recoverGeneratorYield(info) {
+  if (!info || !info.generator || !Array.isArray(info.body)) return;
+  const isIntr = (e, id) => !!(e && e.k === 'call' && e.fn && e.fn.k === 'id' &&
+    (e.fn.name === '%Intrinsic' + id || e.fn.name === '__Intrinsic' + id));
+  const dropArtifacts = (list, i, name) => {
+    let j = i + 1;
+    while (j < list.length) {
+      const t = list[j];
+      if (t.t === 'comment' && /switch-table/.test(t.text)) { list.splice(j, 1); continue; }
+      if (name && (t.t === 'throw' || t.t === 'return') && t.e && t.e.k === 'id' && t.e.name === name) { list.splice(j, 1); continue; }
+      break;
+    }
+  };
+  const walk = (list) => {
+    for (let i = 0; i < list.length; i++) {
+      const s = list[i];
+      if ((s.t === 'var' || s.t === 'expr') && isIntr(s.e, 8)) {
+        const name = s.t === 'var' ? s.name : null;
+        list.splice(i, 1);
+        dropArtifacts(list, i - 1, name);
+        i--;
+        continue;
+      }
+      if ((s.t === 'var' || s.t === 'expr') && isIntr(s.e, 14)) {
+        const args = s.e.args || [];
+        const value = args[0] || E.undef();
+        const done = args[1] && args[1].k === 'lit' && args[1].v === true;
+        const name = s.t === 'var' ? s.name : null;
+        list[i] = done ? { t: 'return', e: value, pos: s.pos } : { t: 'expr', e: E.yield_(value, false), pos: s.pos };
+        dropArtifacts(list, i, name);
+        continue;
+      }
+      if (s.t !== 'fndecl') for (const b of childBlocks(s)) walk(b);
+    }
+  };
+  walk(info.body);
+}
+
+// V8 builds an object literal with a spread from a temp that it assigns a few
+// instructions later. When the temp declaration ends up after the literal, the
+// output throws `Cannot access ... before initialization`. Move the declaration
+// before the first statement that spreads it.
+function hoistSpreadDecls(list) {
+  for (const s of list) for (const b of childBlocks(s)) hoistSpreadDecls(b);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (let i = 0; i < list.length; i++) {
+      const s = list[i];
+      const ids = [];
+      const collect = (e) => {
+        if (!e || typeof e !== 'object') return;
+        if (e.k === 'obj') {
+          for (const p of e.props) {
+            if (p && p.kind === 'spread' && p.value && p.value.k === 'id' && isTemp(p.value.name)) ids.push(p.value.name);
+            else if (p && p.value) collect(p.value);
+          }
+          return;
+        }
+        for (const [, c] of kids(e)) collect(c);
+      };
+      for (const [o, k] of stmtExprs(s)) collect(o[k]);
+      if (!ids.length) continue;
+      const moved = [];
+      for (const id of new Set(ids)) {
+        for (let j = i + 1; j < list.length; j++) {
+          const d = list[j];
+          if (d.t === 'var' && d.name === id) {
+            if (s.t === 'var' && s.name && usesName(d, s.name)) break;
+            moved.push({ j, d });
+            break;
+          }
+        }
+      }
+      if (!moved.length) continue;
+      moved.sort((a, b) => b.j - a.j);
+      for (const m of moved) list.splice(m.j, 1);
+      moved.sort((a, b) => a.j - b.j);
+      list.splice(i, 0, ...moved.map(m => m.d));
+      changed = true;
+      i += moved.length;
+    }
+  }
+}
+
 function process(info, opts = {}) {
   const body = info.body;
   stripWrapperPrologue(body, true);
@@ -1669,14 +1832,18 @@ function process(info, opts = {}) {
   foldCompoundAssign(body);
   shapeLoops(body);
   foldOptionalChaining(body);
+  dropPureExpressions(body);
   {
     const c4 = new Map(), w4 = new Map();
     countIds(body, c4, w4);
     inlineBlock(body, c4, w4);
   }
+  recoverGeneratorYield(info);
   recoverParams(info);
   applyTemplates(body);
+  recoverMapDestructuring(body);
+  hoistSpreadDecls(body);
   reorderHoistedFunctions(body);
   return info;
 }
-module.exports = { process, rename };
+module.exports = { process, rename, hoistSpreadDecls, recoverMapDestructuring, recoverGeneratorYield };

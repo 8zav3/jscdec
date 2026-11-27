@@ -10,6 +10,8 @@ const { spawnSync } = require('node:child_process');
 const ROOT = path.resolve(__dirname, '..');
 const CLI = path.join(ROOT, 'bin', 'jscdec.js');
 const { decompileFile } = require('../src/index');
+const post = require('../src/post');
+const { E, stmt } = require('../src/ast');
 const { Heap } = require('../src/heap');
 const oracle = require('../src/oracle');
 
@@ -179,4 +181,62 @@ test('RC4 _0x string-array deobfuscation is opt-in and preserves decoder by defa
   const cliClean = runCli([sample, '--deobfuscate']);
   assert.equal(cliClean.status, 0);
   assert.match(cliClean.stdout, /const GREETING = "hello from the toy";/);
+});
+
+test('hoistSpreadDecls moves a spread temp before its literal', () => {
+  const body = [
+    { t: 'var', kind: 'const', name: 'x', e: E.obj([{ kind: 'spread', value: E.id('$t') }]) },
+    { t: 'var', kind: 'const', name: '$t', e: E.lit(1) },
+  ];
+  post.hoistSpreadDecls(body);
+  assert.equal(body[0].name, '$t');
+  assert.equal(body[1].name, 'x');
+});
+
+test('recoverMapDestructuring restores the map value object pattern', () => {
+  const body = [
+    {
+      t: 'forin', decl: 'const', of: true, name: '$item', e: E.id('$map'),
+      body: [
+        { t: 'decl', kind: 'const', names: ['a', 'b'], fnScope: false },
+        { t: 'var', kind: 'const', name: '[$d1, $d2]', e: E.id('$item'), destruct: ['$d1', '$d2'] },
+        { t: 'var', kind: 'const', name: '$l', e: E.arr([{ k: 'spread', e: E.index(E.undef(), E.id('a')) }]) },
+        { t: 'var', kind: 'const', name: '$l2', e: E.arr([{ k: 'spread', e: E.index(E.undef(), E.id('b')) }]) },
+      ],
+    },
+    {
+      t: 'expr',
+      e: E.call(E.member(E.id('$map'), 'set'), [E.lit('k'), E.obj([
+        { key: 'a', value: E.lit(1), kind: 'init' },
+        { key: 'b', value: E.lit(2), kind: 'init' },
+        { key: 'side', value: E.obj([]), kind: 'init' },
+      ])]),
+    },
+  ];
+  post.recoverMapDestructuring(body);
+  const out = body.map(s => stmt(s, '')).join('\n');
+  assert.match(out, /const \{ a, b \} = \$d2;/);
+  assert.match(out, /\$d2\.side\[a\]/);
+  assert.match(out, /\$d2\.side\[b\]/);
+  assert.doesNotMatch(out, /undefined\[a\]/);
+});
+
+test('recoverGeneratorYield rebuilds yield and removes the state machine', () => {
+  const info = {
+    generator: true,
+    body: [
+      { t: 'var', kind: 'const', name: '$g', e: E.call(E.id('%Intrinsic8'), [E.undef(), E.id('this')]) },
+      { t: 'comment', text: 'switch-table' },
+      { t: 'throw', e: E.id('$g') },
+      { t: 'return', e: E.id('$g') },
+      { t: 'var', kind: 'const', name: '$y', e: E.call(E.id('%Intrinsic14'), [E.arr([E.lit(0), E.id('n')]), E.lit(false)]) },
+      { t: 'comment', text: 'switch-table' },
+      { t: 'throw', e: E.id('$y') },
+      { t: 'return', e: E.id('$y') },
+    ],
+  };
+  post.recoverGeneratorYield(info);
+  const out = info.body.map(s => stmt(s, '')).join('\n');
+  assert.match(out, /yield \[0, n\];/);
+  assert.doesNotMatch(out, /Intrinsic8|Intrinsic14|switch-table|throw/);
 });

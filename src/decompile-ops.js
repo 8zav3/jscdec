@@ -400,8 +400,11 @@ P.finishCall = function (callee, recv, args, spreadLast, st, out, nextI) {
   let e;
   const def = callee.k === 'id' ? this.tempDefs.get(callee.name) : callee;
   const shape = def && (def.k === 'member' || def.k === 'index') ? def : null;
-  if (!recv || recv.k === 'undef' || (recv.k === 'id' && recv.name === 'undefined')) e = E.call(callee, args);
-  else if (shape && sameExpr(shape.obj, recv)) e = E.call(callee, args);
+  // A method extracted into a temp (`const test = re.test`) still needs the
+  // member receiver. Calling the temp directly loses `this`; use the recovered
+  // member expression instead when the receiver is implicit or matches.
+  if (!recv || recv.k === 'undef' || (recv.k === 'id' && recv.name === 'undefined')) e = E.call(shape || callee, args);
+  else if (shape && sameExpr(shape.obj, recv)) e = E.call(shape, args);
   else e = E.call(E.member(callee, 'call'), [recv, ...args]);
   this.put(st, e, out);
   return nextI;
@@ -420,7 +423,9 @@ P.buildClass = function (args, st, out) {
   const scanDesc = (w, isStatic) => {
     if (!w || w.t !== 'obj') return;
     const d = this.prog.h.objs[w.id];
-    const p0 = this.prog.h.W === 8 ? 3 : 4;
+    // V8 14.6 adds one word to the class descriptor header; older layouts
+    // start the property entries at word 3.
+    const p0 = this.prog.bcMap >= 49 ? 4 : 3;
     for (let p = p0; p + 2 < d.words.length; p += 3) {
       const kv = this.prog.val(d.words[p]);
       if (kv.kind !== 'str' || ['constructor', 'length', 'name', 'prototype'].includes(kv.value)) continue;

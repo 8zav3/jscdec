@@ -533,7 +533,7 @@ P.valueMerge = function (ins, i, t, Jexpr, cont, st, out, loop, kind) {
   const sT = this.clone(st); const oT = [];
   sT.acc = null;
   this.walk(ins.off + ins.len, t, sT, oT, loop);
-  const op = kind === 'F' ? '&&' : kind === 'T' ? '||' : kind === 'nullish' ? '??' : '&&';
+  const op = kind === 'F' ? '&&' : kind === 'T' ? '||' : (kind === 'nullish' || kind === 'nundef' || kind === 'undef') ? '??' : '&&';
   const lhsExpr = (kind === 'F' || kind === 'T') ? lhs : (Jexpr.l || lhs);
   this.flush(st, out);
   if (!oT.length && sT.acc) {
@@ -639,18 +639,30 @@ P.matchArrayDestruct = function (ins, i, iterable, st, out) {
   const disp = pro && this.parseDispatch(pro.fb, pro.tok, pro.exc, pro.msg);
   if (!disp) return null;
   const ops = [];
+  const nextOffs = [];
   for (let m = this.at.get(h.start); m < q.length && q[m].off < h.end; m++) {
-    if (q[m].name === 'LdaUndefined' && q[m + 1] && starReg(q[m + 1]) !== null) ops.push(starReg(q[m + 1]));
+    if (q[m].name === 'CallProperty0' || q[m].name === 'ForOfNext') nextOffs.push(q[m].off);
+    if (q[m].name === 'LdaUndefined' && q[m + 1] && starReg(q[m + 1]) !== null) ops.push({ op: starReg(q[m + 1]), off: q[m + 1].off });
   }
   if (!ops.length) return null;
   this.flush(st, out);
   st.acc = null;
-  const names = ops.map(op => {
+  const names = ops.map(({ op }) => {
     const nm = this.newVar('d');
     st.regs.set(-7 - op, E.id(nm));
     return nm;
   });
-  out.push({ t: 'var', kind: 'const', name: '[' + names.join(', ') + ']', e: iterable, destruct: names });
+  // Preserve holes: map each captured element to the next() call it came from.
+  let pattern = names;
+  if (nextOffs.length >= names.length && nextOffs.length > 1) {
+    pattern = Array(nextOffs.length).fill('');
+    ops.forEach(({ off }, idx) => {
+      let seq = -1;
+      for (let k = 0; k < nextOffs.length; k++) if (nextOffs[k] < off) seq = k;
+      if (seq >= 0) pattern[seq] = names[idx];
+    });
+  }
+  out.push({ t: 'var', kind: 'const', name: '[' + pattern.join(', ') + ']', e: iterable, destruct: pattern });
   if (!this.doneTry) this.doneTry = new Set();
   this.handlers.filter(x => x.start >= h.start && x.start < disp.cont).forEach(x => this.doneTry.add(x));
   return this.idxAt(disp.cont);
